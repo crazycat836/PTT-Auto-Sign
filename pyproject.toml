@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pttautosign"
-version = "1.0.0"
+version = "1.0.1"
 description = "PTT auto sign-in tool with Telegram notifications"
 authors = ["crazycat836 <crazycat836@gmail.com>"]
 readme = "README.md"

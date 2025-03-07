@@ -1,14 +1,65 @@
 import os
 import requests
+import logging
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from dotenv import load_dotenv
 from PyPtt import PTT
 from PyPtt import exceptions as PTT_exceptions
 from datetime import datetime, timezone, timedelta
-from typing import Union
+from typing import Union, Optional
 from dataclasses import dataclass
+from config import TelegramConfig, PTTConfig, get_ptt_accounts
+from utils.logger import setup_logging
 
 # Load environment variables from .env file for local development
 load_dotenv()
+
+# Configure logging
+def setup_logging():
+    """Setup logging configuration"""
+    # Create logs directory if it doesn't exist
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+
+    # Configure logging format
+    log_format = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # Setup file handler with daily rotation
+    file_handler = TimedRotatingFileHandler(
+        'logs/ptt_auto_sign.log',
+        when='midnight',  # Rotate at midnight
+        interval=1,  # Every day
+        backupCount=7,  # Keep 7 days of logs
+        encoding='utf-8'
+    )
+    file_handler.setFormatter(log_format)
+    file_handler.setLevel(logging.INFO)
+
+    # Setup console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_format)
+    console_handler.setLevel(logging.INFO)
+
+    # Setup root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+
+    # Clean up old log files
+    try:
+        for handler in root_logger.handlers:
+            if isinstance(handler, TimedRotatingFileHandler):
+                handler.doRollover()
+    except Exception as e:
+        print(f"Error during log rotation: {str(e)}")
+
+    return root_logger
+
+# Initialize logger
+logger = setup_logging()
 
 @dataclass
 class TelegramConfig:
@@ -31,6 +82,7 @@ class TelegramBot:
     def __init__(self, config: TelegramConfig):
         self.config = config
         self.api_url = f"https://api.telegram.org/bot{config.token}"
+        self.logger = logging.getLogger(__name__)
 
     def send_message(self, text: str) -> bool:
         """Send message to Telegram
@@ -42,6 +94,7 @@ class TelegramBot:
             bool: Whether the message was sent successfully
         """
         try:
+            self.logger.info(f"Sending Telegram message: {text[:50]}...")
             response = requests.post(
                 f"{self.api_url}/sendMessage",
                 json={
@@ -51,29 +104,22 @@ class TelegramBot:
                 }
             )
             response.raise_for_status()
+            self.logger.info("Telegram message sent successfully")
             return True
         except requests.exceptions.RequestException as e:
-            print(f"Failed to send Telegram message: {e}")
+            self.logger.error(f"Failed to send Telegram message: {str(e)}", exc_info=True)
             return False
 
 
 class PTTAutoSign:
     """PTT auto sign-in handler class"""
     
-    # Error message mapping
-    ERROR_MESSAGES = {
-        PTT_exceptions.NoSuchUser: "PTT login failed!\nUser not found",
-        PTT_exceptions.WrongIDorPassword: "PTT login failed!\nIncorrect username or password",
-        PTT_exceptions.WrongPassword: "PTT login failed!\nIncorrect password",
-        PTT_exceptions.LoginTooOften: "PTT login failed!\nToo many login attempts",
-        PTT_exceptions.UseTooManyResources: "PTT login failed!\nToo many resources used",
-        PTT_exceptions.UnregisteredUser: "Unregistered user"
-    }
-    
-    def __init__(self, telegram_bot: TelegramBot):
+    def __init__(self, telegram_bot: TelegramBot, config: Optional[PTTConfig] = None):
         self.ptt = PTT.API(log_level=PTT.log.INFO)
         self.telegram = telegram_bot
-        self.tz = timezone(timedelta(hours=+8))  # Set timezone to UTC+8
+        self.config = config or PTTConfig()
+        self.tz = timezone(timedelta(hours=self.config.timezone_hours))
+        self.logger = logging.getLogger(__name__)
 
     def _format_success_message(self, ptt_id: str, user_info: dict) -> str:
         """Format successful login message
@@ -103,54 +149,36 @@ class PTTAutoSign:
         Returns:
             bool: Whether login was successful
         """
+        self.logger.info(f"Attempting to login PTT account: {ptt_id}")
         try:
             self.ptt.login(ptt_id, ptt_passwd, kick_other_session=True)
             user_info = self.ptt.get_user(ptt_id)
             success_message = self._format_success_message(ptt_id, user_info)
             self.telegram.send_message(success_message)
+            self.logger.info(f"Successfully logged in PTT account: {ptt_id}")
             return True
             
-        except tuple(self.ERROR_MESSAGES.keys()) as e:
-            error_message = self.ERROR_MESSAGES[type(e)]
+        except tuple(self.config.error_messages.keys()) as e:
+            error_message = self.config.error_messages[type(e)]
             if isinstance(e, PTT_exceptions.UnregisteredUser):
                 error_message = f"{ptt_id} {error_message}"
+            self.logger.error(f"Login failed for account {ptt_id}: {error_message}", exc_info=True)
             self.telegram.send_message(error_message)
             return False
             
         finally:
             try:
                 self.ptt.logout()
-            except:
-                pass  # Ignore logout errors
-
-
-def get_ptt_accounts() -> list[tuple[str, str]]:
-    """Get PTT account information from environment variables
-    
-    Returns:
-        list[tuple[str, str]]: List of PTT username and password tuples
-    """
-    accounts = []
-    
-    # Check main account
-    main_account = os.getenv("ptt_id_1")
-    if not main_account:
-        raise ValueError("Main PTT account not set")
-    if main_account.lower() not in ["none", "none,none"]:
-        accounts.append(tuple(main_account.split(",")))
-    
-    # Check additional accounts
-    for i in range(2, 6):
-        account = os.getenv(f"ptt_id_{i}")
-        if account and account.lower() not in ["none", "none,none"]:
-            accounts.append(tuple(account.split(",")))
-    
-    return accounts
+                self.logger.debug(f"Logged out PTT account: {ptt_id}")
+            except Exception as e:
+                self.logger.warning(f"Error during logout for account {ptt_id}: {str(e)}")
 
 
 def main():
     """Main program entry point"""
+    logger = logging.getLogger(__name__)
     try:
+        logger.info("Starting PTT Auto Sign program")
         # Initialize configurations
         telegram_config = TelegramConfig.from_env()
         telegram_bot = TelegramBot(telegram_config)
@@ -161,11 +189,13 @@ def main():
         for ptt_id, ptt_passwd in accounts:
             ptt_auto_sign.daily_login(ptt_id, ptt_passwd)
             
+        logger.info("PTT Auto Sign program completed successfully")
+            
     except ValueError as e:
-        print(f"Configuration error: {e}")
+        logger.error(f"Configuration error: {str(e)}", exc_info=True)
         exit(1)
     except Exception as e:
-        print(f"Runtime error: {e}")
+        logger.error(f"Runtime error: {str(e)}", exc_info=True)
         exit(1)
 
 

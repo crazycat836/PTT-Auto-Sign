@@ -1,32 +1,31 @@
 FROM python:3.11-slim
 
-# Install basic tools and cron
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     cron \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
-RUN pip install poetry
+# Copy project files
+COPY . .
 
-WORKDIR /app
+# Install Python dependencies
+RUN pip install --no-cache-dir poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-dev --no-interaction --no-ansi
 
-# Copy Poetry files
-COPY pyproject.toml poetry.lock ./
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data
 
-# Install dependencies without creating virtual environment
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
+# Set timezone
+ENV TZ=Asia/Taipei
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Copy application files
-COPY main.py ./
-COPY run_script.sh ./
+# Copy and set up random execution script
+COPY random_cron.sh /app/random_cron.sh
+RUN chmod +x /app/random_cron.sh
 
-# Setup cron job to run at 00:00 daily
-RUN echo "0 0 * * * /app/run_script.sh >> /var/log/cron.log 2>&1" > /etc/cron.d/auto-sign \
-    && chmod 0644 /etc/cron.d/auto-sign \
-    && chmod +x /app/run_script.sh \
-    && crontab /etc/cron.d/auto-sign \
-    && touch /var/log/cron.log
-
-# Start cron service and keep container running
-CMD cron && tail -f /var/log/cron.log 
+# Set entrypoint
+ENTRYPOINT ["/app/random_cron.sh"] 

@@ -1,25 +1,35 @@
 #!/bin/bash
 
-# 檢查是否已安裝 poetry
-if ! command -v poetry &> /dev/null; then
-    echo "Poetry is not installed. Please install it first."
-    echo "You can install it using:"
-    echo "curl -sSL https://install.python-poetry.org | python3 -"
-    exit 1
-fi
+# Check if running in Docker
+if [ -f /.dockerenv ]; then
+    # Running in Docker
+    echo "Running PTT Auto Sign in Docker..."
+    python main.py
+else
+    # Running locally
+    echo "Running PTT Auto Sign locally..."
 
-# 檢查 .env 檔案是否存在
-if [ ! -f .env ]; then
-    echo ".env file not found. Please create it first."
-    echo "You can copy from .env.example:"
-    echo "cp .env.example .env"
-    exit 1
-fi
+    # Check if poetry is installed
+    if ! command -v poetry &> /dev/null; then
+        echo "Poetry is not installed. Please install it first."
+        echo "You can install it using:"
+        echo "curl -sSL https://install.python-poetry.org | python3 -"
+        exit 1
+    fi
 
-# 安裝依賴
-echo "Installing dependencies..."
-poetry install
+    # Check if .env file exists
+    if [ ! -f .env ]; then
+        echo ".env file not found. Please create it first."
+        echo "You can copy from .env.example:"
+        echo "cp .env.example .env"
+        exit 1
+    fi
 
-# 執行程式
-echo "Running PTT Auto Sign..."
-poetry run python main.py 
+    # Install dependencies
+    echo "Installing dependencies..."
+    poetry install
+
+    # Run the script
+    echo "Running PTT Auto Sign..."
+    poetry run python main.py
+fi 
