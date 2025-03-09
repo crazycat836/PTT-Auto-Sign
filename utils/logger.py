@@ -20,8 +20,8 @@ def setup_logging(config: Optional[LogConfig] = None) -> logging.Logger:
     if not os.path.exists(config.log_dir):
         os.makedirs(config.log_dir)
 
-    # Configure logging format
-    log_format = logging.Formatter(config.log_format)
+    # Configure logging format with custom date format
+    log_format = logging.Formatter(config.log_format, datefmt="%Y-%m-%d %H:%M:%S")
 
     # Setup file handler with daily rotation
     file_handler = TimedRotatingFileHandler(

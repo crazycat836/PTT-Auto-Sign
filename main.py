@@ -13,6 +13,7 @@ from utils.logger import setup_logging
 
 # Load environment variables from .env file for local development
 load_dotenv()
+setup_logging()
 
 class TelegramBot:
     """Telegram Bot handler class"""
@@ -113,8 +114,7 @@ class PTTAutoSign:
 
 
 def main():
-    """Main program entry point"""
-    logger = setup_logging()
+    logger = logging.getLogger(__name__)
     try:
         logger.info("Starting PTT Auto Sign program")
         # Initialize configurations
