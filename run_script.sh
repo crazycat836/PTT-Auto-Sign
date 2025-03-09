@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set Python environment variable to prevent __pycache__ creation
+export PYTHONDONTWRITEBYTECODE=1
+
 # Check if running in Docker
 if [ -f /.dockerenv ]; then
     # Running in Docker
@@ -31,5 +34,5 @@ else
 
     # Run the script
     echo "Running PTT Auto Sign..."
-    poetry run python main.py
+    poetry run python -B main.py
 fi 

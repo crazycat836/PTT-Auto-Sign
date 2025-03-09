@@ -27,5 +27,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 COPY random_cron.sh /app/random_cron.sh
 RUN chmod +x /app/random_cron.sh
 
+# Set PYTHONDONTWRITEBYTECODE environment variable
+ENV PYTHONDONTWRITEBYTECODE=1
+
 # Set entrypoint
 ENTRYPOINT ["/app/random_cron.sh"] 

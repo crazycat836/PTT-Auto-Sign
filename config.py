@@ -46,7 +46,7 @@ class LogConfig:
     """Logging configuration"""
     log_dir: str = "logs"
     log_file: str = "ptt_auto_sign.log"
-    backup_count: int = 7
+    backup_count: int = 5
     log_format: str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
     log_level: int = logging.INFO
 
