@@ -14,69 +14,6 @@ from utils.logger import setup_logging
 # Load environment variables from .env file for local development
 load_dotenv()
 
-# Configure logging
-def setup_logging():
-    """Setup logging configuration"""
-    # Create logs directory if it doesn't exist
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
-
-    # Configure logging format
-    log_format = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
-    # Setup file handler with daily rotation
-    file_handler = TimedRotatingFileHandler(
-        'logs/ptt_auto_sign.log',
-        when='midnight',  # Rotate at midnight
-        interval=1,  # Every day
-        backupCount=7,  # Keep 7 days of logs
-        encoding='utf-8'
-    )
-    file_handler.setFormatter(log_format)
-    file_handler.setLevel(logging.INFO)
-
-    # Setup console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(log_format)
-    console_handler.setLevel(logging.INFO)
-
-    # Setup root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
-
-    # Clean up old log files
-    try:
-        for handler in root_logger.handlers:
-            if isinstance(handler, TimedRotatingFileHandler):
-                handler.doRollover()
-    except Exception as e:
-        print(f"Error during log rotation: {str(e)}")
-
-    return root_logger
-
-# Initialize logger
-logger = setup_logging()
-
-@dataclass
-class TelegramConfig:
-    """Telegram configuration"""
-    token: str
-    chat_id: Union[str, int]
-    
-    @classmethod
-    def from_env(cls) -> 'TelegramConfig':
-        """Load configuration from environment variables"""
-        token = os.getenv("bot_token")
-        chat_id = os.getenv("chat_id")
-        if not token or not chat_id:
-            raise ValueError("Telegram bot token or chat id not set")
-        return cls(token=token, chat_id=chat_id)
-
-
 class TelegramBot:
     """Telegram Bot handler class"""
     def __init__(self, config: TelegramConfig):
@@ -150,6 +87,7 @@ class PTTAutoSign:
             bool: Whether login was successful
         """
         self.logger.info(f"Attempting to login PTT account: {ptt_id}")
+        exceptions_to_catch = tuple(self.config.error_messages.keys())
         try:
             self.ptt.login(ptt_id, ptt_passwd, kick_other_session=True)
             user_info = self.ptt.get_user(ptt_id)
@@ -158,8 +96,8 @@ class PTTAutoSign:
             self.logger.info(f"Successfully logged in PTT account: {ptt_id}")
             return True
             
-        except tuple(self.config.error_messages.keys()) as e:
-            error_message = self.config.error_messages[type(e)]
+        except exceptions_to_catch as e:
+            error_message = self.config.error_messages.get(type(e), str(e))
             if isinstance(e, PTT_exceptions.UnregisteredUser):
                 error_message = f"{ptt_id} {error_message}"
             self.logger.error(f"Login failed for account {ptt_id}: {error_message}", exc_info=True)
@@ -176,7 +114,7 @@ class PTTAutoSign:
 
 def main():
     """Main program entry point"""
-    logger = logging.getLogger(__name__)
+    logger = setup_logging()
     try:
         logger.info("Starting PTT Auto Sign program")
         # Initialize configurations

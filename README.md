@@ -77,16 +77,9 @@ Logs are stored in the following locations:
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3 (AGPL-3.0) - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-This license requires that if you run a modified version of this program on a server and let other users communicate with it there, your server must also allow them to download the source code corresponding to the modified version running there.
+This license allows you to freely use, modify, and distribute this software, including for commercial purposes, as long as you include the original copyright notice and license text.
 
 ## Changelog
-
-### v1.0.1
-- Added random daily execution time (9 AM - 5 PM)
-- Improved logging system
-- Enhanced Docker support
-- Added local development support
-- Fixed container restart issues
-- Changed license to GNU Affero General Public License v3 (AGPL-3.0)
+Please refer to [CHANGELOG.md](CHANGELOG.md) for detailed changelog.

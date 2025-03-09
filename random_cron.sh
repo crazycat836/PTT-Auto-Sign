@@ -9,6 +9,7 @@ CRON_LOG_DIR=/app/logs
 
 # Create necessary directories
 mkdir -p "$CRON_DATA_DIR"
+mkdir -p "$CRON_LOG_DIR"
 
 # Generate random minute (0-59)
 RANDOM_MINUTE=$((RANDOM % 60))
