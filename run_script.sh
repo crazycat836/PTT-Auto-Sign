@@ -86,7 +86,7 @@ if [ -f /.dockerenv ]; then
     touch /app/data/healthcheck
     
     # Run the script
-    python main.py
+    python3 main.py
 else
     # Running locally
     echo "Welcome to PTT Auto Sign"
