@@ -37,6 +37,5 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Logs
-logs/
-*.log
+# Local documentation
+architecture_improvements.md

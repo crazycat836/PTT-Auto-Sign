@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/issues)
 [![Release](https://img.shields.io/github/v/release/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.11%2B-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.13%2B-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker Pulls](https://img.shields.io/docker/pulls/crazycat836/pttautosign?style=for-the-badge&color=5D6D7E)](https://hub.docker.com/r/crazycat836/pttautosign)
 
 English | [繁體中文](README_zh-TW.md)
@@ -19,6 +19,9 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 - 📝 Comprehensive logging system
 - ⚙️ Flexible environment variable configuration
 - 🔒 Secure account management
+- 🐍 Python 3.13 support with telnetlib compatibility layer
+- 🧪 Comprehensive test suite with high code coverage
+- 🏗️ Modular code architecture for maintainability
 
 ## 🚀 Quick Start
 
@@ -49,14 +52,14 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 
 ### Local Development
 
-1. Install Python 3.11+ and Poetry:
+1. Install Python 3.13+ and Poetry:
    ```bash
    # macOS
-   brew install python@3.11 poetry
+   brew install python@3.13 poetry
    
    # Ubuntu/Debian
    sudo apt update
-   sudo apt install python3.11
+   sudo apt install python3.13
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
@@ -92,15 +95,64 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 
 ## 📝 Logging
 
-### Log Locations
-- Docker: Inside container at `/app/logs`
-- Local: In the `logs` directory of the project
-
 ### Log Levels
 - INFO: General execution information
 - WARNING: Warning messages
 - ERROR: Error messages
 - DEBUG: Debug information (development only)
+
+All logs are output to the console only. No log files are created locally.
+
+## 🧪 Testing
+
+The project includes a comprehensive test suite to ensure code quality and reliability.
+
+### Running Tests
+
+```bash
+# Run all tests
+poetry run pytest
+
+# Run tests with coverage report
+poetry run pytest --cov=. --cov-report=term-missing
+
+# Run specific test file
+poetry run pytest tests/test_telegram.py
+```
+
+### Code Formatting
+
+The project uses Black and isort for code formatting:
+
+```bash
+# Format code with Black
+poetry run black .
+
+# Sort imports with isort
+poetry run isort .
+```
+
+## 🏗️ Project Structure
+
+```
+pttautosign/
+├── config.py           # Configuration classes and functions
+├── main.py             # Main entry point
+├── monkey_patch.py     # Telnetlib compatibility layer for Python 3.13
+├── utils/
+│   ├── __init__.py
+│   ├── logger.py       # Logging configuration
+│   ├── ptt.py          # PTT auto sign-in functionality
+│   └── telegram.py     # Telegram notification functionality
+├── tests/
+│   ├── __init__.py
+│   ├── test_config.py  # Tests for configuration
+│   ├── test_ptt.py     # Tests for PTT functionality
+│   └── test_telegram.py # Tests for Telegram functionality
+├── Dockerfile          # Docker configuration
+├── pyproject.toml      # Project metadata and dependencies
+└── run_script.sh       # Script for local execution
+```
 
 ## ❗️ Troubleshooting
 
@@ -120,6 +172,10 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
    - Verify bot_token is valid
    - Check chat_id is correct
    - Ensure Bot is added to group/channel
+
+4. Python 3.13 Compatibility
+   - The project includes a compatibility layer for the `telnetlib` module which was removed in Python 3.13
+   - If you encounter issues with `telnetlib`, ensure the `monkey_patch.py` file is properly loaded before importing PyPtt
 
 ## 🤝 Contributing
 

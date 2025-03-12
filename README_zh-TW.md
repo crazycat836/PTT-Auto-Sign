@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/issues)
 [![Release](https://img.shields.io/github/v/release/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.11%2B-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.13%2B-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker Pulls](https://img.shields.io/docker/pulls/crazycat836/pttautosign?style=for-the-badge&color=5D6D7E)](https://hub.docker.com/r/crazycat836/pttautosign)
 
 [English](README.md) | 繁體中文
@@ -19,6 +19,9 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 - 📝 完整的日誌記錄系統
 - ⚙️ 彈性的環境變數配置
 - 🔒 安全的帳號管理機制
+- 🐍 支援 Python 3.13 並提供 telnetlib 相容層
+- 🧪 全面的測試套件，確保程式碼品質
+- 🏗️ 模組化架構設計，提高可維護性
 
 ## 🚀 快速開始
 
@@ -49,14 +52,14 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 
 ### 本地開發
 
-1. 安裝 Python 3.11+ 和 Poetry：
+1. 安裝 Python 3.13+ 和 Poetry：
    ```bash
    # macOS
-   brew install python@3.11 poetry
+   brew install python@3.13 poetry
    
    # Ubuntu/Debian
    sudo apt update
-   sudo apt install python3.11
+   sudo apt install python3.13
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
@@ -92,15 +95,64 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 
 ## 📝 日誌系統
 
-### 日誌位置
-- Docker 環境：容器內的 `/app/logs` 目錄
-- 本地環境：專案根目錄的 `logs` 資料夾
-
 ### 日誌等級
 - INFO：一般執行資訊
 - WARNING：警告訊息
 - ERROR：錯誤訊息
 - DEBUG：除錯資訊（僅開發環境）
+
+所有日誌僅輸出到控制台，不會在本地創建日誌檔案。
+
+## 🧪 測試
+
+專案包含全面的測試套件，確保程式碼品質和可靠性。
+
+### 執行測試
+
+```bash
+# 執行所有測試
+poetry run pytest
+
+# 執行測試並產生覆蓋率報告
+poetry run pytest --cov=. --cov-report=term-missing
+
+# 執行特定測試檔案
+poetry run pytest tests/test_telegram.py
+```
+
+### 程式碼格式化
+
+專案使用 Black 和 isort 進行程式碼格式化：
+
+```bash
+# 使用 Black 格式化程式碼
+poetry run black .
+
+# 使用 isort 排序 import 語句
+poetry run isort .
+```
+
+## 🏗️ 專案結構
+
+```
+pttautosign/
+├── config.py           # 配置類別和函數
+├── main.py             # 主程式進入點
+├── monkey_patch.py     # Python 3.13 的 telnetlib 相容層
+├── utils/
+│   ├── __init__.py
+│   ├── logger.py       # 日誌配置
+│   ├── ptt.py          # PTT 自動簽到功能
+│   └── telegram.py     # Telegram 通知功能
+├── tests/
+│   ├── __init__.py
+│   ├── test_config.py  # 配置測試
+│   ├── test_ptt.py     # PTT 功能測試
+│   └── test_telegram.py # Telegram 功能測試
+├── Dockerfile          # Docker 配置
+├── pyproject.toml      # 專案元數據和依賴
+└── run_script.sh       # 本地執行腳本
+```
 
 ## ❗️ 故障排除
 
@@ -120,6 +172,10 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
    - 確認 bot_token 是否有效
    - 檢查 chat_id 是否正確
    - 確認 Bot 是否已加入群組/頻道
+
+4. Python 3.13 相容性問題
+   - 專案包含了 `telnetlib` 模組的相容層，該模組在 Python 3.13 中已被移除
+   - 如果遇到 `telnetlib` 相關問題，請確保在導入 PyPtt 前已正確載入 `monkey_patch.py` 檔案
 
 ## 🤝 貢獻指南
 
