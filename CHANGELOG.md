@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.1.1
+- Fixed Python command in Docker environment (changed from `python` to `python3`)
+
 ## v1.1.0
 - Refactored code architecture with modular design and dependency injection pattern
 - Added application context (AppContext) for lifecycle and dependency management
