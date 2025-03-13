@@ -21,7 +21,7 @@ class PTTAutoSign(LoginService):
             telegram_bot: Notification service for sending notifications
             config: Optional PTT configuration. If None, default config will be used.
         """
-        self.ptt = PTT.API(log_level=PTT.log.INFO)
+        self.ptt = PTT.API(log_level=PTT.log.SILENT)
         self.telegram = telegram_bot
         self.config = config or PTTConfig()
         self.tz = timezone(timedelta(hours=self.config.timezone_hours))

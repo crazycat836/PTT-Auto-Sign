@@ -51,9 +51,9 @@ test_login_and_notification() {
     echo "Installing dependencies..."
     poetry install
 
-    # Run login test with notification
-    echo "Running login test with Telegram notification..."
-    poetry run python src/pttautosign/main.py --test-login --test-notification
+    # Run login test without notification
+    echo "Running login test without Telegram notification..."
+    poetry run python -W ignore src/pttautosign/main.py --test-login
 }
 
 # Function to test login, notification and cron
@@ -75,7 +75,7 @@ test_with_cron() {
 #!/bin/bash
 cd "$(dirname "$script_path")/.."
 echo "\$(date): PTT Auto Sign cron test executed" >> /tmp/ptt_cron_test.log
-poetry run python src/pttautosign/main.py --test-login --test-notification > /tmp/ptt_cron_output.log 2>&1
+poetry run python -W ignore src/pttautosign/main.py --test-login --test-notification > /tmp/ptt_cron_output.log 2>&1
 EOF
     
     chmod +x "$temp_script"

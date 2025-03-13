@@ -38,9 +38,9 @@ def test_login_and_notification(app_context):
         notification_service = app_context.get_notification_service()
         login_service = app_context.get_login_service()
         
-        # Test login (without sending notifications for each login)
+        # Test login
         accounts = get_ptt_accounts()
-        results = login_service.batch_login(accounts, send_notification=False)
+        results = login_service.batch_login(accounts)
         
         # Print results
         success_count = sum(1 for success in results.values() if success)

@@ -107,6 +107,9 @@ def setup_logging(config: Optional[LogConfig] = None,
     # Add console handler only
     root_logger.addHandler(console_handler)
     
+    # Set PyPtt logger to a higher level to suppress its logs
+    logging.getLogger('PyPtt').setLevel(logging.ERROR)
+    
     # Log system information
     logger = logging.getLogger(__name__)
     logger.info(f"Logging initialized: level={logging.getLevelName(config.log_level)}, format={'JSON' if use_json else 'text'}")
