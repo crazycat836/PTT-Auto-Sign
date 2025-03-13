@@ -24,28 +24,30 @@ class AppContext:
         Raises:
             ConfigValidationError: If configuration is invalid
         """
-        # Load and validate all configurations
-        self.app_config = AppConfig.from_env()
+        # Load configuration first
+        self._load_configuration()
         
         # Setup logging with configuration
-        setup_logging(
-            config=self.app_config.log,
-            use_json=self.app_config.log.use_json_format,
-            include_hostname=self.app_config.log.include_hostname
-        )
+        self.logger = setup_logging(self.app_config.log)
         
-        # Initialize logger
-        self.logger = get_logger(__name__)
+        # Log initialization
         self.logger.info("Initializing application context")
-        
-        # Initialize service factory
-        self.service_factory = ServiceFactory(self.app_config)
-        
-        # Log configuration summary
         self.logger.info(f"Loaded configuration: {len(get_ptt_accounts())} PTT accounts")
-        self.logger.debug(f"Configuration: {self.app_config.to_json()}")
+        
+        # Initialize services
+        self._initialize_services()
         
         self.logger.info("Application context initialized successfully")
+    
+    def _load_configuration(self) -> None:
+        """Load application configuration."""
+        # Load and validate all configurations
+        self.app_config = AppConfig.from_env()
+    
+    def _initialize_services(self) -> None:
+        """Initialize service factory and services."""
+        # Initialize service factory
+        self.service_factory = ServiceFactory(self.app_config)
     
     def get_notification_service(self) -> NotificationService:
         """Get notification service instance.
@@ -85,6 +87,8 @@ class AppContext:
             
             # Get account list and perform batch login
             accounts = get_ptt_accounts()
+            self.logger.info(f"Processing {len(accounts)} PTT accounts")
+            
             results = login_service.batch_login(accounts)
             
             # Log results summary
@@ -95,6 +99,8 @@ class AppContext:
             if success_count < len(results):
                 failed_accounts = [account for account, success in results.items() if not success]
                 self.logger.warning(f"Failed accounts: {', '.join(failed_accounts)}")
+            else:
+                self.logger.info("All accounts processed successfully")
             
             self.logger.info("PTT Auto Sign program completed successfully")
                 

@@ -74,7 +74,7 @@ class PTTAutoSign(LoginService):
         Returns:
             bool: Whether login was successful
         """
-        self.logger.info(f"Attempting to login PTT account: {ptt_id}")
+        # Log message is now in batch_login, so we don't need to log it here
         exceptions_to_catch = tuple(self.config.error_messages.keys())
         
         try:
@@ -85,7 +85,6 @@ class PTTAutoSign(LoginService):
             if send_notification:
                 self.telegram.send_message(success_message)
                 
-            self.logger.info(f"Successfully logged in PTT account: {ptt_id}")
             self.retry_count = 0  # Reset retry count on success
             return True
             
@@ -131,19 +130,42 @@ class PTTAutoSign(LoginService):
             except Exception as e:
                 self.logger.warning(f"Error during logout for account {ptt_id}: {str(e)}")
     
-    def batch_login(self, accounts: List[Tuple[str, str]], send_notification: bool = True) -> Dict[str, bool]:
-        """Perform batch login for multiple accounts
+    def batch_login(self, accounts: List[Tuple[str, str]]) -> Dict[str, bool]:
+        """Batch login to PTT accounts.
         
         Args:
             accounts: List of (username, password) tuples
-            send_notification: Whether to send notification on success/failure
             
         Returns:
-            Dict[str, bool]: Dictionary mapping usernames to login success status
+            Dict[str, bool]: Dictionary of login results (username -> success)
         """
         results = {}
-        for ptt_id, ptt_passwd in accounts:
-            results[ptt_id] = self.login(ptt_id, ptt_passwd, send_notification)
+        
+        if not accounts:
+            self.logger.warning("No PTT accounts configured")
+            return results
+        
+        self.logger.info(f"Starting batch login for {len(accounts)} accounts")
+        
+        for username, password in accounts:
+            try:
+                self.logger.info(f"Attempting to login PTT account: {username}")
+                success = self.login(username, password)
+                results[username] = success
+                
+                if success:
+                    self.logger.info(f"Successfully logged in PTT account: {username}")
+                else:
+                    self.logger.error(f"Failed to login PTT account: {username}")
+                    
+            except Exception as e:
+                self.logger.error(f"Error logging in PTT account {username}: {str(e)}")
+                results[username] = False
+        
+        # Log summary
+        success_count = sum(1 for success in results.values() if success)
+        self.logger.info(f"Batch login completed: {success_count}/{len(results)} successful")
+        
         return results
         
     # Keep the old method name for backward compatibility

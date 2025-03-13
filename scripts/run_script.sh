@@ -4,6 +4,19 @@
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONUNBUFFERED=1
 
+# Set environment variable to suppress PyPtt logs
+export PYTHONIOENCODING=utf-8
+export PYTHONWARNINGS=ignore
+export PYPTT_DISABLE_LOGS=1
+
+# Force color output
+export FORCE_COLOR=1
+export PYTHONCOLORIZE=1
+export TERM=xterm-256color
+
+# Set Python path to ensure our patches are applied
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+
 # Function to check system architecture
 check_architecture() {
     local arch=$(uname -m)
@@ -53,7 +66,8 @@ test_login_and_notification() {
 
     # Run login test without notification
     echo "Running login test without Telegram notification..."
-    poetry run python -W ignore src/pttautosign/main.py --test-login
+    # Run with PYTHONPATH to ensure our patches are applied and filter out original PyPtt logs
+    PYTHONPATH=$(pwd) poetry run python -W ignore src/pttautosign/main.py --test-login 2>&1 | grep -v "^\[.*\]\[PyPtt\]"
 }
 
 # Function to test login, notification and cron
@@ -75,7 +89,7 @@ test_with_cron() {
 #!/bin/bash
 cd "$(dirname "$script_path")/.."
 echo "\$(date): PTT Auto Sign cron test executed" >> /tmp/ptt_cron_test.log
-poetry run python -W ignore src/pttautosign/main.py --test-login --test-notification > /tmp/ptt_cron_output.log 2>&1
+PYTHONPATH=\$(pwd) poetry run python -W ignore src/pttautosign/main.py --test-login --test-notification 2>&1 | grep -v "^\[.*\]\[PyPtt\]" > /tmp/ptt_cron_output.log 2>&1
 EOF
     
     chmod +x "$temp_script"
@@ -118,6 +132,7 @@ run_docker_test() {
         --env-file .env \
         -e "ENABLE_CRON=true" \
         -e "CRON_SCHEDULE=* * * * *" \
+        -e "PYPTT_DISABLE_LOGS=1" \
         pttautosign:test
 }
 

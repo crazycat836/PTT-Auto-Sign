@@ -89,7 +89,45 @@ def setup_logging(config: Optional[LogConfig] = None,
     if use_json:
         log_formatter = JsonFormatter(include_hostname=include_hostname)
     else:
-        log_formatter = logging.Formatter(config.log_format, datefmt="%Y-%m-%d %H:%M:%S")
+        # Define ANSI color codes for different log levels
+        COLORS = {
+            'DEBUG': '\033[36m',     # Cyan
+            'INFO': '\033[32m',      # Green
+            'WARNING': '\033[33m',   # Yellow
+            'ERROR': '\033[31m',     # Red
+            'CRITICAL': '\033[41m',  # Red background
+            'TRACE': '\033[35m',     # Magenta
+            'RESET': '\033[0m',      # Reset to default
+        }
+        
+        # Use a more consistent format with shorter module name
+        log_format = '%(asctime)s [%(name)s] [%(levelname)s] %(message)s'
+        
+        # Create a custom formatter that shortens the logger name and adds colors
+        class ColorShortNameFormatter(logging.Formatter):
+            def format(self, record):
+                # Shorten the logger name to just the last part or last two parts
+                parts = record.name.split('.')
+                if len(parts) > 2:
+                    # For deeply nested modules, show only the last two parts
+                    record.name = '.'.join(parts[-2:])
+                
+                # Add colors based on log level
+                levelname = record.levelname
+                if levelname in COLORS:
+                    # Store original levelname
+                    original_levelname = record.levelname
+                    # Apply color
+                    record.levelname = f"{COLORS[levelname]}{levelname}{COLORS['RESET']}"
+                    # Format the record
+                    result = super().format(record)
+                    # Restore original levelname
+                    record.levelname = original_levelname
+                    return result
+                else:
+                    return super().format(record)
+        
+        log_formatter = ColorShortNameFormatter(log_format, datefmt="%Y-%m-%d %H:%M:%S")
 
     # Setup console handler
     console_handler = logging.StreamHandler()
@@ -109,6 +147,9 @@ def setup_logging(config: Optional[LogConfig] = None,
     
     # Set PyPtt logger to a higher level to suppress its logs
     logging.getLogger('PyPtt').setLevel(logging.ERROR)
+    
+    # Set asyncio logger to WARNING to reduce noise
+    logging.getLogger('asyncio').setLevel(logging.WARNING)
     
     # Log system information
     logger = logging.getLogger(__name__)

@@ -8,6 +8,7 @@ import logging
 import importlib.util
 import re
 import warnings
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,33 @@ def direct_patch_pyptt():
         import PyPtt._api_get_time as get_time
         import PyPtt._api_loginout as loginout
         import PyPtt._api_mail as mail
+        
+        # Check if we should disable PyPtt logs
+        disable_logs = os.environ.get('PYPTT_DISABLE_LOGS', '0').lower() in ('1', 'true', 'yes')
+        
+        # Patch PyPtt logging to use our logger
+        try:
+            import PyPtt.log as ptt_log
+            from PyPtt import PTT
+            
+            # Only patch the PyPtt API to use SILENT log level
+            if disable_logs:
+                # Store the original __init__ method
+                original_init = PTT.API.__init__
+                
+                # Create a patched __init__ method that always sets log_level to SILENT
+                def patched_init(self, *args, **kwargs):
+                    # Force log_level to SILENT
+                    if hasattr(ptt_log, 'SILENT'):
+                        kwargs['log_level'] = ptt_log.SILENT
+                    original_init(self, *args, **kwargs)
+                
+                # Apply the patch
+                PTT.API.__init__ = patched_init
+                logger.info("Patched PyPtt API to use SILENT log level")
+            
+        except (ImportError, AttributeError) as e:
+            logger.warning(f"Failed to patch PyPtt logging: {str(e)}")
         
         # Patch _api_util.py patterns
         if hasattr(api_util, 'line_from_pattern'):
@@ -323,16 +351,34 @@ def direct_patch_pyptt():
 
 def apply_pyptt_patch():
     """Apply all PyPtt compatibility patches."""
+    # Log a single message at the start
+    logger.info("Applying PyPtt compatibility patches...")
+    
+    # Apply patches
     websockets_patched = patch_websockets()
     regex_patched = patch_pyptt_regex()
     direct_patched = direct_patch_pyptt()
     warnings_suppressed = suppress_pyptt_warnings()
     
-    if websockets_patched and (regex_patched or direct_patched) and warnings_suppressed:
-        logger.info("PyPtt compatibility patches applied successfully")
+    # Log a summary of applied patches
+    patches_applied = []
+    if websockets_patched:
+        patches_applied.append("websockets")
+    if regex_patched:
+        patches_applied.append("regex")
+    if direct_patched:
+        patches_applied.append("direct patterns")
+    if warnings_suppressed:
+        patches_applied.append("warnings")
+    
+    if len(patches_applied) == 4:
+        logger.info("All PyPtt compatibility patches applied successfully")
+        return True
+    elif len(patches_applied) > 0:
+        logger.warning(f"Some PyPtt patches applied: {', '.join(patches_applied)}")
         return True
     else:
-        logger.warning("Some PyPtt compatibility patches failed to apply")
+        logger.error("Failed to apply any PyPtt compatibility patches")
         return False
 
 # Apply patches when the module is imported
