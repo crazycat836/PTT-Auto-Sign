@@ -12,7 +12,7 @@ from pttautosign.patches import monkey_patch, pyptt_patch
 # Import main modules
 from pttautosign.utils.config import AppConfig, ConfigValidationError
 from pttautosign.utils.app_context import AppContext
-from pttautosign.utils.main import main
+from pttautosign.main import main
 
 # Define what's available when importing the package
 __all__ = [

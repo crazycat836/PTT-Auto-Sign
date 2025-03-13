@@ -7,7 +7,6 @@ import traceback
 import platform
 import socket
 import requests
-import time
 from datetime import datetime
 from typing import Optional, Dict, Any, Union
 from pttautosign.utils.config import TelegramConfig
@@ -24,7 +23,7 @@ class TelegramBot(NotificationService):
         """
         self.config = config
         self.api_url = f"https://api.telegram.org/bot{config.token}"
-        self.logger = logging.getLogger("pttautosign")
+        self.logger = logging.getLogger(__name__)
         self.hostname = socket.gethostname()
         self.max_retries = 3
         self.retry_delay = 2  # seconds
@@ -58,10 +57,10 @@ class TelegramBot(NotificationService):
             return True
             
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Failed to send Telegram message: {str(e)}")
+            self.logger.error(f"Failed to send Telegram message: {str(e)}", exc_info=True)
             return False
         except Exception as e:
-            self.logger.error(f"Unexpected error sending Telegram message: {str(e)}")
+            self.logger.error(f"Unexpected error sending Telegram message: {str(e)}", exc_info=True)
             return False
     
     def send_error_notification(self, error: Exception, context: Optional[Dict[str, Any]] = None, 
@@ -112,7 +111,7 @@ class TelegramBot(NotificationService):
             return self.send_message(message)
             
         except Exception as e:
-            self.logger.error(f"Failed to send error notification: {str(e)}")
+            self.logger.error(f"Failed to send error notification: {str(e)}", exc_info=True)
             return False
     
     def send_with_retry(self, text: str, max_retries: Optional[int] = None, 
@@ -127,6 +126,8 @@ class TelegramBot(NotificationService):
         Returns:
             bool: Whether the message was sent successfully
         """
+        import time
+        
         max_retries = max_retries or self.max_retries
         retry_delay = retry_delay or self.retry_delay
         

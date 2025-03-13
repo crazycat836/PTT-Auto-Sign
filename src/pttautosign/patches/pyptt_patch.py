@@ -8,7 +8,7 @@ import logging
 import importlib.util
 import re
 
-logger = logging.getLogger("pttautosign")
+logger = logging.getLogger(__name__)
 
 def patch_websockets():
     """Patch websockets.http module to add USER_AGENT attribute if missing."""
@@ -40,22 +40,35 @@ def patched_compile(pattern, flags=0):
     
     # Only patch patterns from PyPtt modules
     if isinstance(pattern, str) and module_name.startswith('PyPtt'):
-        # Fix common invalid escape sequences in PyPtt
-        if '\\d' in pattern and not '\\\\d' in pattern:
-            pattern = pattern.replace('\\d', '\\\\d')
-        if '\\w' in pattern and not '\\\\w' in pattern:
-            pattern = pattern.replace('\\w', '\\\\w')
-        if '\\S' in pattern and not '\\\\S' in pattern:
-            pattern = pattern.replace('\\S', '\\\\S')
-        if '\\[' in pattern and not '\\\\[' in pattern:
-            pattern = pattern.replace('\\[', '\\\\[')
-        if '\\-' in pattern and not '\\\\-' in pattern:
-            pattern = pattern.replace('\\-', '\\\\-')
+        # Create a list of escape sequences to fix
+        escape_sequences = ['\\d', '\\w', '\\S', '\\[', '\\]', '\\-', '\\+', '\\|', '\\(', '\\)', '\\{', '\\}', '\\s']
+        
+        # Fix each escape sequence
+        for seq in escape_sequences:
+            if seq in pattern and not '\\\\' + seq[1] in pattern:
+                pattern = pattern.replace(seq, '\\' + seq)
+        
+        # Fix nested character classes
+        if '[' in pattern and ']' in pattern:
+            # This is a more complex fix that would require parsing the regex
+            # For now, we'll just log a warning
+            if '[' in pattern[pattern.find('[') + 1:pattern.find(']')]:
+                logger.debug(f"Possible nested character class in pattern: {pattern}")
         
         logger.debug(f"Patched regex pattern in {module_name}: {pattern}")
     
-    # Call the original compile function
-    return original_compile(pattern, flags)
+    # Call the original compile function with the fixed pattern
+    try:
+        return original_compile(pattern, flags)
+    except re.error as e:
+        logger.warning(f"Failed to compile regex pattern: {pattern}, error: {e}")
+        # Try to escape the pattern as a literal string as a fallback
+        try:
+            return original_compile(re.escape(pattern), flags)
+        except re.error:
+            # If all else fails, return a pattern that matches nothing
+            logger.error(f"Could not fix regex pattern: {pattern}")
+            return original_compile(r'(?!)', flags)
 
 def patch_pyptt_regex():
     """Patch PyPtt regex patterns to fix invalid escape sequences."""
@@ -133,10 +146,16 @@ def apply_pyptt_patch():
     websockets_patched = patch_websockets()
     regex_patched = patch_pyptt_regex()
     direct_patched = direct_patch_pyptt()
-
+    
     if websockets_patched and (regex_patched or direct_patched):
         logger.info("PyPtt compatibility patches applied successfully")
         return True
     else:
         logger.warning("Some PyPtt compatibility patches failed to apply")
-        return False 
+        return False
+
+# Apply patches when the module is imported
+apply_pyptt_patch()
+
+# Restore original sys.path if needed
+# sys.path = original_path 

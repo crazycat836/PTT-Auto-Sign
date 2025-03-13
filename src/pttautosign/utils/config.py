@@ -277,23 +277,45 @@ class AppConfig:
         """
         return json.dumps(self.to_dict(), indent=2)
 
-def get_ptt_accounts() -> Dict[str, str]:
-    """Get PTT accounts from environment variables
+def get_ptt_accounts() -> List[Tuple[str, str]]:
+    """Get PTT account information from environment variables
     
     Returns:
-        Dict[str, str]: Dictionary of PTT accounts (username -> password)
+        List[Tuple[str, str]]: List of PTT username and password tuples
+        
+    Raises:
+        ConfigValidationError: If no valid accounts are found
     """
-    accounts = {}
+    accounts = []
     
-    # Get all environment variables
-    for key, value in os.environ.items():
-        # Check if the key starts with "ptt_account_"
-        if key.startswith("ptt_account_"):
-            # Extract username from the key
-            username = key[len("ptt_account_"):]
-            
-            # Add to accounts dictionary
-            accounts[username] = value
+    # Check main account
+    main_account = os.getenv("ptt_id_1")
+    if not main_account:
+        raise ConfigValidationError("Main PTT account not set in environment variables")
+    
+    if main_account.lower() not in ["none", "none,none"]:
+        parts = main_account.split(",")
+        if len(parts) != 2:
+            raise ConfigValidationError(f"Invalid account format for ptt_id_1: {main_account}")
+        username, password = parts
+        if not username or not password:
+            raise ConfigValidationError(f"Username and password cannot be empty for ptt_id_1")
+        accounts.append((username, password))
+    
+    # Check additional accounts
+    for i in range(2, 6):
+        account = os.getenv(f"ptt_id_{i}")
+        if account and account.lower() not in ["none", "none,none"]:
+            parts = account.split(",")
+            if len(parts) != 2:
+                raise ConfigValidationError(f"Invalid account format for ptt_id_{i}: {account}")
+            username, password = parts
+            if not username or not password:
+                raise ConfigValidationError(f"Username and password cannot be empty for ptt_id_{i}")
+            accounts.append((username, password))
+    
+    if not accounts:
+        raise ConfigValidationError("No valid PTT accounts found in environment variables")
     
     return accounts
 

@@ -12,7 +12,7 @@ import logging
 from typing import Optional, Union, Any
 
 # Setup logger
-logger = logging.getLogger("pttautosign")
+logger = logging.getLogger(__name__)
 
 class Telnet:
     """
@@ -323,10 +323,10 @@ class TelnetlibModule:
         logger.info("Telnetlib compatibility layer initialized")
 
 def apply_monkey_patch():
-    """Apply monkey patch for telnetlib module."""
-    if 'telnetlib' not in sys.modules:
-        logger.info("Applying telnetlib monkey patch")
-        sys.modules['telnetlib'] = TelnetlibModule()
-        logger.info("Telnetlib monkey patch applied successfully")
-    else:
-        logger.info("Telnetlib module already exists, skipping monkey patch") 
+    """Apply the monkey patch for telnetlib."""
+    # Install the fake telnetlib module in sys.modules
+    sys.modules['telnetlib'] = TelnetlibModule()
+    logger.info("Installed telnetlib compatibility layer in sys.modules")
+
+# Apply the patch when the module is imported
+apply_monkey_patch() 

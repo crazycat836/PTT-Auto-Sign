@@ -51,11 +51,11 @@ class LoginService(ABC):
         pass
     
     @abstractmethod
-    def batch_login(self, accounts: Dict[str, str]) -> Dict[str, bool]:
+    def batch_login(self, accounts: List[Tuple[str, str]]) -> Dict[str, bool]:
         """Perform batch login.
         
         Args:
-            accounts: Dictionary mapping usernames to passwords
+            accounts: List of (username, password) tuples
             
         Returns:
             Dict[str, bool]: Dictionary mapping usernames to login success status

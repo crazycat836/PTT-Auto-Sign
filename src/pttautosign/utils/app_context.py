@@ -16,7 +16,7 @@ class AppContext:
         """Initialize the application context."""
         self.app_config: Optional[AppConfig] = None
         self.service_factory: Optional[ServiceFactory] = None
-        self.logger = logging.getLogger("pttautosign")
+        self.logger = logging.getLogger(__name__)
     
     def initialize(self) -> None:
         """Initialize the application context.
@@ -35,7 +35,7 @@ class AppContext:
         )
         
         # Initialize logger
-        self.logger = get_logger("pttautosign")
+        self.logger = get_logger(__name__)
         self.logger.info("Initializing application context")
         
         # Initialize service factory
@@ -80,6 +80,7 @@ class AppContext:
         
         try:
             # Get service instances
+            notification_service = self.get_notification_service()
             login_service = self.get_login_service()
             
             # Get account list and perform batch login
@@ -98,5 +99,16 @@ class AppContext:
             self.logger.info("PTT Auto Sign program completed successfully")
                 
         except Exception as e:
-            self.logger.error(f"Runtime error: {str(e)}")
+            self.logger.error(f"Runtime error: {str(e)}", exc_info=True)
+            
+            # Try to send error notification if possible
+            try:
+                notification_service = self.get_notification_service()
+                notification_service.send_error_notification(
+                    e, 
+                    context={"operation": "main", "status": "failed"}
+                )
+            except Exception as notify_error:
+                self.logger.error(f"Failed to send error notification: {str(notify_error)}")
+            
             raise 

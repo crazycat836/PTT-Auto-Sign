@@ -3,12 +3,12 @@ PTT auto sign-in module for handling PTT login operations.
 """
 
 import logging
-import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, Tuple, List
 from PyPtt import PTT
 from PyPtt import exceptions as PTT_exceptions
 from pttautosign.utils.config import PTTConfig
+from pttautosign.utils.telegram import TelegramBot
 from pttautosign.utils.interfaces import LoginService, NotificationService
 
 class PTTAutoSign(LoginService):
@@ -25,7 +25,7 @@ class PTTAutoSign(LoginService):
         self.telegram = telegram_bot
         self.config = config or PTTConfig()
         self.tz = timezone(timedelta(hours=self.config.timezone_hours))
-        self.logger = logging.getLogger("pttautosign")
+        self.logger = logging.getLogger(__name__)
         self.retry_count = 0
         self.max_retries = 3
 
@@ -63,12 +63,13 @@ class PTTAutoSign(LoginService):
         
         return f"❌ {error_message}"
 
-    def login(self, ptt_id: str, ptt_passwd: str) -> bool:
+    def login(self, ptt_id: str, ptt_passwd: str, send_notification: bool = True) -> bool:
         """Perform login
         
         Args:
             ptt_id: PTT username
             ptt_passwd: PTT password
+            send_notification: Whether to send notification on success/failure
             
         Returns:
             bool: Whether login was successful
@@ -80,51 +81,69 @@ class PTTAutoSign(LoginService):
             self.ptt.login(ptt_id, ptt_passwd, kick_other_session=True)
             user_info = self.ptt.get_user(ptt_id)
             success_message = self._format_success_message(ptt_id, user_info)
-            self.telegram.send_message(success_message)
+            
+            if send_notification:
+                self.telegram.send_message(success_message)
+                
             self.logger.info(f"Successfully logged in PTT account: {ptt_id}")
             self.retry_count = 0  # Reset retry count on success
             return True
             
         except exceptions_to_catch as e:
             error_message = self._format_error_message(ptt_id, e)
-            self.logger.error(f"Login failed for account {ptt_id}: {error_message}")
+            self.logger.error(f"Login failed for account {ptt_id}: {error_message}", exc_info=True)
             
             # Handle retries for temporary errors
             if isinstance(e, (PTT_exceptions.LoginTooOften, PTT_exceptions.UseTooManyResources)) and self.retry_count < self.max_retries:
                 self.retry_count += 1
                 self.logger.info(f"Retrying login for {ptt_id} (attempt {self.retry_count}/{self.max_retries})")
                 # Wait before retrying (exponential backoff)
+                import time
                 time.sleep(2 ** self.retry_count)
-                return self.login(ptt_id, ptt_passwd)
+                return self.login(ptt_id, ptt_passwd, send_notification)
             
-            self.telegram.send_message(error_message)
+            if send_notification:
+                self.telegram.send_message(error_message)
+                
             return False
             
         except Exception as e:
-            self.logger.error(f"Unexpected error during login for account {ptt_id}: {str(e)}")
-            self.telegram.send_message(f"❌ Unexpected error: {str(e)}")
+            self.logger.error(f"Unexpected error during login for account {ptt_id}: {str(e)}", exc_info=True)
+            
+            if send_notification:
+                self.telegram.send_message(f"❌ Unexpected error: {str(e)}")
+                
             return False
             
         finally:
             try:
-                # 直接嘗試登出，不檢查是否已登入
-                self.ptt.logout()
-                self.logger.debug(f"Logged out PTT account: {ptt_id}")
+                # Check if the ptt object has the is_login method
+                if hasattr(self.ptt, 'is_login') and callable(self.ptt.is_login) and self.ptt.is_login():
+                    self.ptt.logout()
+                    self.logger.debug(f"Logged out PTT account: {ptt_id}")
+                else:
+                    # Attempt to logout directly if is_login method is not available
+                    try:
+                        self.ptt.logout()
+                        self.logger.debug(f"Logged out PTT account: {ptt_id}")
+                    except Exception:
+                        pass
             except Exception as e:
-                self.logger.debug(f"Logout not needed for account {ptt_id}: {str(e)}")
+                self.logger.warning(f"Error during logout for account {ptt_id}: {str(e)}")
     
-    def batch_login(self, accounts: Dict[str, str]) -> Dict[str, bool]:
+    def batch_login(self, accounts: List[Tuple[str, str]], send_notification: bool = True) -> Dict[str, bool]:
         """Perform batch login for multiple accounts
         
         Args:
-            accounts: Dictionary mapping usernames to passwords
+            accounts: List of (username, password) tuples
+            send_notification: Whether to send notification on success/failure
             
         Returns:
             Dict[str, bool]: Dictionary mapping usernames to login success status
         """
         results = {}
-        for ptt_id, ptt_passwd in accounts.items():
-            results[ptt_id] = self.login(ptt_id, ptt_passwd)
+        for ptt_id, ptt_passwd in accounts:
+            results[ptt_id] = self.login(ptt_id, ptt_passwd, send_notification)
         return results
         
     # Keep the old method name for backward compatibility
