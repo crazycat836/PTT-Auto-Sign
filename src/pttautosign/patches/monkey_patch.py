@@ -5,11 +5,13 @@ This module creates a fake telnetlib module in sys.modules.
 
 import sys
 import asyncio
-import telnetlib3
 import threading
 import time
 import logging
 from typing import Optional, Union, Any
+
+# Use our fake telnetlib3 module
+from pttautosign.patches.fake_telnetlib3 import open_connection
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -59,7 +61,7 @@ class Telnet:
             TimeoutError: If connection times out
             ConnectionError: If connection fails
         """
-        logger.info(f"Connecting to {host}:{port} with timeout {timeout}")
+        logger.debug(f"Connecting to {host}:{port} with timeout {timeout}")
         self.host = host
         self.port = port
         self.timeout = timeout
@@ -67,6 +69,9 @@ class Telnet:
         # Reset connection state
         self._connection_event.clear()
         self._connection_error = None
+        
+        # Keep track of whether we're in PyPtt module
+        in_pyptt_module = False
         
         # Create a new event loop for this connection
         self._loop = asyncio.new_event_loop()
@@ -97,7 +102,7 @@ class Telnet:
             async def connect():
                 try:
                     logger.debug(f"Attempting to connect to {self.host}:{self.port}")
-                    self._reader, self._writer = await telnetlib3.open_connection(
+                    self._reader, self._writer = await open_connection(
                         self.host, self.port, connect_minwait=0.05
                     )
                     self._connected = True
@@ -267,7 +272,7 @@ class Telnet:
     def close(self) -> None:
         """Close the connection."""
         if self._connected:
-            logger.info(f"Closing connection to {self.host}:{self.port}")
+            logger.debug(f"Closing connection to {self.host}:{self.port}")
             
             async def close_connection():
                 try:
@@ -320,13 +325,13 @@ class Telnet:
 class TelnetlibModule:
     def __init__(self):
         self.Telnet = Telnet
-        logger.info("Telnetlib compatibility layer initialized")
+        logger.debug("Telnetlib compatibility layer initialized")
 
 def apply_monkey_patch():
     """Apply the monkey patch for telnetlib."""
     # Install the fake telnetlib module in sys.modules
     sys.modules['telnetlib'] = TelnetlibModule()
-    logger.info("Installed telnetlib compatibility layer in sys.modules")
+    logger.debug("Installed telnetlib compatibility layer in sys.modules")
 
 # Apply the patch when the module is imported
 apply_monkey_patch() 

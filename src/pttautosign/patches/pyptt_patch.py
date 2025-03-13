@@ -18,7 +18,7 @@ def patch_websockets():
     try:
         import websockets.http
         if not hasattr(websockets.http, 'USER_AGENT'):
-            logger.info("Adding USER_AGENT attribute to websockets.http")
+            logger.debug("Adding USER_AGENT attribute to websockets.http")
             websockets.http.USER_AGENT = "Python/3.13 websockets/12.0"
             return True
         return True
@@ -101,7 +101,7 @@ def suppress_pyptt_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module=".*pyptt_patch.*")
         warnings.filterwarnings("ignore", category=DeprecationWarning, module="PyPtt.*")
         warnings.filterwarnings("ignore", category=DeprecationWarning, module=".*pyptt_patch.*")
-        logger.info("Suppressed SyntaxWarning and FutureWarning warnings from PyPtt modules")
+        logger.debug("Suppressed SyntaxWarning and FutureWarning warnings from PyPtt modules")
         return True
     except Exception as e:
         logger.error(f"Failed to suppress PyPtt warnings: {str(e)}")
@@ -117,7 +117,7 @@ def patch_pyptt_regex():
         
         # Apply the patch
         re.compile = patched_compile
-        logger.info("Patched re.compile to fix invalid escape sequences in PyPtt modules")
+        logger.debug("Patched re.compile to fix invalid escape sequences in PyPtt modules")
         return True
     except Exception as e:
         logger.error(f"Failed to patch PyPtt regex: {str(e)}")
@@ -355,7 +355,7 @@ def direct_patch_pyptt():
 def apply_pyptt_patch():
     """Apply all PyPtt compatibility patches."""
     # Log a single message at the start
-    logger.info("Applying PyPtt compatibility patches...")
+    logger.debug("Applying PyPtt compatibility patches...")
     
     # Apply patches
     websockets_patched = patch_websockets()

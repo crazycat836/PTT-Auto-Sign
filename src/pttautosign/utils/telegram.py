@@ -41,7 +41,7 @@ class TelegramBot(NotificationService):
         try:
             # Mask sensitive information in logs
             masked_text = text[:100] + "..." if len(text) > 100 else text
-            self.logger.info(f"正在發送 Telegram 訊息：{masked_text}")
+            self.logger.debug(f"正在發送 Telegram 訊息：{masked_text}")
             
             response = requests.post(
                 f"{self.api_url}/sendMessage",
@@ -53,7 +53,7 @@ class TelegramBot(NotificationService):
                 timeout=10  # Add timeout for better error handling
             )
             response.raise_for_status()
-            self.logger.info("Telegram 訊息發送成功")
+            self.logger.debug("Telegram 訊息發送成功")
             return True
             
         except requests.exceptions.RequestException as e:
@@ -133,7 +133,7 @@ class TelegramBot(NotificationService):
         
         for attempt in range(max_retries):
             if attempt > 0:
-                self.logger.info(f"正在重試發送訊息（第 {attempt+1}/{max_retries} 次嘗試）")
+                self.logger.debug(f"正在重試發送訊息（第 {attempt+1}/{max_retries} 次嘗試）")
                 time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
                 
             if self.send_message(text):

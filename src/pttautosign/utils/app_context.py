@@ -94,7 +94,7 @@ class AppContext:
             
             # Log results summary
             success_count = sum(1 for success in results.values() if success)
-            self.logger.info(f"登入結果：{success_count}/{len(results)} 個帳號成功")
+            self.logger.debug(f"登入結果：{success_count}/{len(results)} 個帳號成功")
             
             # Log failed accounts if any
             if success_count < len(results):

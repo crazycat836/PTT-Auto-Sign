@@ -153,7 +153,7 @@ def setup_logging(config: Optional[LogConfig] = None,
     
     # Log system information
     logger = logging.getLogger(__name__)
-    logger.info(f"Logging initialized: level={logging.getLevelName(config.log_level)}, format={'JSON' if use_json else 'text'}")
+    logger.debug(f"Logging initialized: level={logging.getLevelName(config.log_level)}, format={'JSON' if use_json else 'text'}")
     logger.debug(f"System: {platform.system()} {platform.release()}, Python: {platform.python_version()}")
 
     return logger
