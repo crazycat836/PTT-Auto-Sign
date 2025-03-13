@@ -90,12 +90,12 @@ class PTTAutoSign(LoginService):
             
         except exceptions_to_catch as e:
             error_message = self._format_error_message(ptt_id, e)
-            self.logger.error(f"Login failed for account {ptt_id}: {error_message}", exc_info=True)
+            self.logger.error(f"帳號 {ptt_id} 登入失敗：{error_message}", exc_info=True)
             
             # Handle retries for temporary errors
             if isinstance(e, (PTT_exceptions.LoginTooOften, PTT_exceptions.UseTooManyResources)) and self.retry_count < self.max_retries:
                 self.retry_count += 1
-                self.logger.info(f"Retrying login for {ptt_id} (attempt {self.retry_count}/{self.max_retries})")
+                self.logger.debug(f"正在重試帳號 {ptt_id} 的登入（第 {self.retry_count}/{self.max_retries} 次嘗試）")
                 # Wait before retrying (exponential backoff)
                 import time
                 time.sleep(2 ** self.retry_count)
@@ -107,7 +107,7 @@ class PTTAutoSign(LoginService):
             return False
             
         except Exception as e:
-            self.logger.error(f"Unexpected error during login for account {ptt_id}: {str(e)}", exc_info=True)
+            self.logger.error(f"帳號 {ptt_id} 登入時發生未預期的錯誤：{str(e)}", exc_info=True)
             
             if send_notification:
                 self.telegram.send_message(f"❌ Unexpected error: {str(e)}")
@@ -119,16 +119,16 @@ class PTTAutoSign(LoginService):
                 # Check if the ptt object has the is_login method
                 if hasattr(self.ptt, 'is_login') and callable(self.ptt.is_login) and self.ptt.is_login():
                     self.ptt.logout()
-                    self.logger.debug(f"Logged out PTT account: {ptt_id}")
+                    self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
                 else:
                     # Attempt to logout directly if is_login method is not available
                     try:
                         self.ptt.logout()
-                        self.logger.debug(f"Logged out PTT account: {ptt_id}")
+                        self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
                     except Exception:
                         pass
             except Exception as e:
-                self.logger.warning(f"Error during logout for account {ptt_id}: {str(e)}")
+                self.logger.warning(f"帳號 {ptt_id} 登出時發生錯誤：{str(e)}")
     
     def batch_login(self, accounts: List[Tuple[str, str]]) -> Dict[str, bool]:
         """Batch login to PTT accounts.
@@ -142,29 +142,29 @@ class PTTAutoSign(LoginService):
         results = {}
         
         if not accounts:
-            self.logger.warning("No PTT accounts configured")
+            self.logger.warning("未設定 PTT 帳號")
             return results
         
-        self.logger.info(f"Starting batch login for {len(accounts)} accounts")
+        self.logger.info(f"開始批次登入 {len(accounts)} 個帳號")
         
         for username, password in accounts:
             try:
-                self.logger.info(f"Attempting to login PTT account: {username}")
+                self.logger.debug(f"正在嘗試登入 PTT 帳號：{username}")
                 success = self.login(username, password)
                 results[username] = success
                 
                 if success:
-                    self.logger.info(f"Successfully logged in PTT account: {username}")
+                    self.logger.debug(f"PTT 帳號 {username} 登入成功")
                 else:
-                    self.logger.error(f"Failed to login PTT account: {username}")
+                    self.logger.error(f"PTT 帳號 {username} 登入失敗")
                     
             except Exception as e:
-                self.logger.error(f"Error logging in PTT account {username}: {str(e)}")
+                self.logger.error(f"PTT 帳號 {username} 登入時發生錯誤：{str(e)}")
                 results[username] = False
         
         # Log summary
         success_count = sum(1 for success in results.values() if success)
-        self.logger.info(f"Batch login completed: {success_count}/{len(results)} successful")
+        self.logger.info(f"批次登入完成：{success_count}/{len(results)} 個帳號成功")
         
         return results
         

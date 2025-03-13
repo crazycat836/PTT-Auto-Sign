@@ -31,13 +31,14 @@ class AppContext:
         self.logger = setup_logging(self.app_config.log)
         
         # Log initialization
-        self.logger.info("Initializing application context")
-        self.logger.info(f"Loaded configuration: {len(get_ptt_accounts())} PTT accounts")
+        self.logger.debug("應用程式上下文已建立")
+        self.logger.debug("正在初始化應用程式上下文")
+        self.logger.debug(f"已載入設定：{len(get_ptt_accounts())} 個 PTT 帳號")
         
         # Initialize services
         self._initialize_services()
         
-        self.logger.info("Application context initialized successfully")
+        self.logger.debug("應用程式上下文初始化完成")
     
     def _load_configuration(self) -> None:
         """Load application configuration."""
@@ -78,7 +79,7 @@ class AppContext:
         if not self.app_config or not self.service_factory:
             raise RuntimeError("Application context not initialized")
         
-        self.logger.info("Starting PTT Auto Sign program")
+        self.logger.info("PTT 自動簽到程式開始執行")
         
         try:
             # Get service instances
@@ -87,25 +88,25 @@ class AppContext:
             
             # Get account list and perform batch login
             accounts = get_ptt_accounts()
-            self.logger.info(f"Processing {len(accounts)} PTT accounts")
+            self.logger.debug(f"正在處理 {len(accounts)} 個 PTT 帳號")
             
             results = login_service.batch_login(accounts)
             
             # Log results summary
             success_count = sum(1 for success in results.values() if success)
-            self.logger.info(f"Login results: {success_count}/{len(results)} accounts successful")
+            self.logger.info(f"登入結果：{success_count}/{len(results)} 個帳號成功")
             
             # Log failed accounts if any
             if success_count < len(results):
                 failed_accounts = [account for account, success in results.items() if not success]
-                self.logger.warning(f"Failed accounts: {', '.join(failed_accounts)}")
+                self.logger.warning(f"失敗帳號：{', '.join(failed_accounts)}")
             else:
-                self.logger.info("All accounts processed successfully")
+                self.logger.debug("所有帳號處理完成")
             
-            self.logger.info("PTT Auto Sign program completed successfully")
+            self.logger.info("PTT 自動簽到程式執行完成")
                 
         except Exception as e:
-            self.logger.error(f"Runtime error: {str(e)}", exc_info=True)
+            self.logger.error(f"執行時錯誤：{str(e)}", exc_info=True)
             
             # Try to send error notification if possible
             try:
@@ -115,6 +116,6 @@ class AppContext:
                     context={"operation": "main", "status": "failed"}
                 )
             except Exception as notify_error:
-                self.logger.error(f"Failed to send error notification: {str(notify_error)}")
+                self.logger.error(f"發送錯誤通知失敗：{str(notify_error)}")
             
             raise 

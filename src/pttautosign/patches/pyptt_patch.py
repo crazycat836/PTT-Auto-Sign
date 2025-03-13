@@ -9,6 +9,7 @@ import importlib.util
 import re
 import warnings
 import os
+from typing import Any, Pattern
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def patch_websockets():
         import websockets.http
         if not hasattr(websockets.http, 'USER_AGENT'):
             logger.info("Adding USER_AGENT attribute to websockets.http")
-            websockets.http.USER_AGENT = "Python/websockets"
+            websockets.http.USER_AGENT = "Python/3.13 websockets/12.0"
             return True
         return True
     except ImportError:
@@ -98,6 +99,8 @@ def suppress_pyptt_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, module="PyPtt.*")
         warnings.filterwarnings("ignore", category=SyntaxWarning, module=".*pyptt_patch.*")
         warnings.filterwarnings("ignore", category=FutureWarning, module=".*pyptt_patch.*")
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module="PyPtt.*")
+        warnings.filterwarnings("ignore", category=DeprecationWarning, module=".*pyptt_patch.*")
         logger.info("Suppressed SyntaxWarning and FutureWarning warnings from PyPtt modules")
         return True
     except Exception as e:

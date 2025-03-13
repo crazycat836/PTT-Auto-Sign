@@ -1,15 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Suppress warnings from PyPtt modules
+import warnings
+warnings.simplefilter('ignore', SyntaxWarning)
+warnings.simplefilter('ignore', FutureWarning)
+warnings.simplefilter('ignore', DeprecationWarning)
+
 import os
 import sys
 import logging
 import argparse
-import warnings
 from dotenv import load_dotenv
-
-# Suppress warnings from PyPtt modules
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="PyPtt.*")
-warnings.filterwarnings("ignore", category=FutureWarning, module="PyPtt.*")
-warnings.filterwarnings("ignore", category=SyntaxWarning, module=".*pyptt_patch.*")
-warnings.filterwarnings("ignore", category=FutureWarning, module=".*pyptt_patch.*")
 
 # Custom formatter to shorten logger names
 class ShortNameFormatter(logging.Formatter):
@@ -76,10 +78,10 @@ pyptt_logger.propagate = False  # Prevent logs from propagating to the root logg
 pyptt_logger.setLevel(logging.CRITICAL)  # Set to CRITICAL to suppress most logs
 
 # Import our patches before importing any PyPtt related modules
-logger.info("Starting PTT Auto Sign")
-logger.info("Applying compatibility patches...")
+logger.info("PTT 自動簽到程式啟動")
+logger.debug("正在套用相容性修補...")
 from pttautosign.patches import monkey_patch, pyptt_patch
-logger.info("Patches applied successfully")
+logger.debug("修補套用完成")
 
 # Load environment variables from .env file for local development
 load_dotenv()
@@ -94,6 +96,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="PTT Auto Sign")
     parser.add_argument("--test-login", action="store_true", help="Test login functionality")
     parser.add_argument("--test-notification", action="store_true", help="Test notification functionality")
+    parser.add_argument("--script", type=int, choices=[1, 2, 3, 4], help="Script number to run")
     return parser.parse_args()
 
 def test_login_and_notification(app_context):
@@ -103,7 +106,7 @@ def test_login_and_notification(app_context):
         notification_service = app_context.get_notification_service()
         login_service = app_context.get_login_service()
         
-        logger.info("Starting login test")
+        logger.info("開始登入測試")
         
         # Test login
         accounts = get_ptt_accounts()
@@ -111,28 +114,28 @@ def test_login_and_notification(app_context):
         
         # Print results
         success_count = sum(1 for success in results.values() if success)
-        logger.info(f"Login test completed")
-        logger.info(f"Total accounts: {len(accounts)}")
-        logger.info(f"Successful logins: {success_count}")
-        logger.info(f"Failed logins: {len(accounts) - success_count}")
+        logger.info("登入測試完成")
+        logger.debug(f"帳號總數：{len(accounts)}")
+        logger.info(f"登入成功：{success_count}")
+        logger.info(f"登入失敗：{len(accounts) - success_count}")
         
         if success_count < len(accounts):
             failed_accounts = [account for account, success in results.items() if not success]
-            logger.warning(f"Failed accounts: {', '.join(failed_accounts)}")
+            logger.warning(f"失敗帳號：{', '.join(failed_accounts)}")
         
         # Test Telegram notification if requested
         if args.test_notification:
-            logger.info("Sending test notification to Telegram...")
+            logger.debug("正在發送 Telegram 測試通知...")
             message = f'🧪 PTT Auto Sign Test\n\n✅ Login test completed successfully\nAccounts: {len(accounts)}\nSuccessful: {success_count}'
             result = notification_service.send_message(message)
             
             if result:
-                logger.info("Telegram notification sent successfully")
+                logger.debug("Telegram 通知發送成功")
             else:
-                logger.error("Failed to send Telegram notification")
+                logger.error("Telegram 通知發送失敗")
                 
     except Exception as e:
-        logger.error(f"Error during test: {str(e)}", exc_info=True)
+        logger.error(f"測試過程發生錯誤：{str(e)}", exc_info=True)
         return False
     
     return True
@@ -144,13 +147,19 @@ def main():
         global args
         args = parse_args()
         
+        # Set logging level based on script number
+        if args.script in [1, 2, 3]:
+            root_logger.setLevel(logging.DEBUG)
+        else:
+            root_logger.setLevel(logging.INFO)
+        
         # Create and initialize application context
         app_context = AppContext()
         app_context.initialize()
         
         # Check if we're running in test mode
         if args.test_login:
-            logger.info("Running in test mode")
+            logger.debug("正在執行測試模式")
             success = test_login_and_notification(app_context)
             if not success:
                 exit(1)
@@ -159,10 +168,10 @@ def main():
             app_context.run()
         
     except ConfigValidationError as e:
-        logger.error(f"Configuration error: {str(e)}", exc_info=True)
+        logger.error(f"設定錯誤：{str(e)}", exc_info=True)
         exit(1)
     except Exception as e:
-        logger.error(f"Runtime error: {str(e)}", exc_info=True)
+        logger.error(f"執行時錯誤：{str(e)}", exc_info=True)
         exit(1)
 
 

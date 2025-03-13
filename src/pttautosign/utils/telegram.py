@@ -40,8 +40,8 @@ class TelegramBot(NotificationService):
         """
         try:
             # Mask sensitive information in logs
-            masked_text = text[:50] + "..." if len(text) > 50 else text
-            self.logger.info(f"Sending Telegram message: {masked_text}")
+            masked_text = text[:100] + "..." if len(text) > 100 else text
+            self.logger.info(f"正在發送 Telegram 訊息：{masked_text}")
             
             response = requests.post(
                 f"{self.api_url}/sendMessage",
@@ -53,14 +53,14 @@ class TelegramBot(NotificationService):
                 timeout=10  # Add timeout for better error handling
             )
             response.raise_for_status()
-            self.logger.info("Telegram message sent successfully")
+            self.logger.info("Telegram 訊息發送成功")
             return True
             
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Failed to send Telegram message: {str(e)}", exc_info=True)
+            self.logger.error(f"Telegram 訊息發送失敗：{str(e)}", exc_info=True)
             return False
         except Exception as e:
-            self.logger.error(f"Unexpected error sending Telegram message: {str(e)}", exc_info=True)
+            self.logger.error(f"發送 Telegram 訊息時發生未預期的錯誤：{str(e)}", exc_info=True)
             return False
     
     def send_error_notification(self, error: Exception, context: Optional[Dict[str, Any]] = None, 
@@ -111,7 +111,7 @@ class TelegramBot(NotificationService):
             return self.send_message(message)
             
         except Exception as e:
-            self.logger.error(f"Failed to send error notification: {str(e)}", exc_info=True)
+            self.logger.error(f"發送錯誤通知失敗：{str(e)}", exc_info=True)
             return False
     
     def send_with_retry(self, text: str, max_retries: Optional[int] = None, 
@@ -133,11 +133,11 @@ class TelegramBot(NotificationService):
         
         for attempt in range(max_retries):
             if attempt > 0:
-                self.logger.info(f"Retrying to send message (attempt {attempt+1}/{max_retries})")
+                self.logger.info(f"正在重試發送訊息（第 {attempt+1}/{max_retries} 次嘗試）")
                 time.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
                 
             if self.send_message(text):
                 return True
         
-        self.logger.error(f"Failed to send message after {max_retries} attempts")
+        self.logger.error(f"訊息發送失敗，已重試 {max_retries} 次")
         return False 
