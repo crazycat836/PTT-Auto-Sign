@@ -144,11 +144,6 @@ pttautosign/
 │   ├── logger.py       # Logging configuration
 │   ├── ptt.py          # PTT auto sign-in functionality
 │   └── telegram.py     # Telegram notification functionality
-├── tests/
-│   ├── __init__.py
-│   ├── test_config.py  # Tests for configuration
-│   ├── test_ptt.py     # Tests for PTT functionality
-│   └── test_telegram.py # Tests for Telegram functionality
 ├── Dockerfile          # Docker configuration
 ├── pyproject.toml      # Project metadata and dependencies
 └── run_script.sh       # Script for local execution

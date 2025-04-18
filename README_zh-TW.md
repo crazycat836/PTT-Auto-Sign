@@ -144,11 +144,6 @@ pttautosign/
 │   ├── logger.py       # 日誌配置
 │   ├── ptt.py          # PTT 自動簽到功能
 │   └── telegram.py     # Telegram 通知功能
-├── tests/
-│   ├── __init__.py
-│   ├── test_config.py  # 配置測試
-│   ├── test_ptt.py     # PTT 功能測試
-│   └── test_telegram.py # Telegram 功能測試
 ├── Dockerfile          # Docker 配置
 ├── pyproject.toml      # 專案元數據和依賴
 └── run_script.sh       # 本地執行腳本
