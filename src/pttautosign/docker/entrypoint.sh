@@ -158,7 +158,8 @@ fi
 
 # Set up cron job if enabled
 echo "Setting up cron job using random_cron.sh..."
-echo "Running in test mode: will execute every minute for 5 times"
+echo "First running a test execution to verify your parameters..."
+echo "This will sign in to PTT and send a test Telegram notification"
 
 # Run random_cron.sh to setup the cron job
 /usr/local/bin/random_cron.sh
