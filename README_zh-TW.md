@@ -43,6 +43,17 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 
 3. 運行容器：
    ```bash
+   # 選項 1：直接使用環境變數
+   docker run -d \
+     --name ptt-auto-sign \
+     --restart unless-stopped \
+     -e PTT_USERNAME=你的用戶名 \
+     -e PTT_PASSWORD=你的密碼 \
+     -e TELEGRAM_BOT_TOKEN=你的Bot令牌 \
+     -e TELEGRAM_CHAT_ID=你的聊天ID \
+     crazycat836/pttautosign:latest
+     
+   # 選項 2：使用 .env 檔案
    docker run -d \
      --name ptt-auto-sign \
      --restart unless-stopped \
@@ -84,14 +95,20 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 ### Telegram 設定
 | 變數名稱 | 說明 | 必填 | 範例 |
 |---------|------|------|------|
-| bot_token | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
-| chat_id | 通知訊息接收群組/頻道 ID | ✅ | -1001234567890 |
+| TELEGRAM_BOT_TOKEN | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
+| TELEGRAM_CHAT_ID | 通知訊息接收群組/頻道 ID | ✅ | -1001234567890 |
 
 ### PTT 帳號設定
 | 變數名稱 | 說明 | 必填 | 範例 |
 |---------|------|------|------|
-| ptt_id_1 | 主要帳號 | ✅ | username,password |
-| ptt_id_2 ~ ptt_id_5 | 額外帳號 | ❌ | username,password 或 none,none |
+| PTT_USERNAME | PTT 帳號用戶名 | ✅ | your_username |
+| PTT_PASSWORD | PTT 帳號密碼 | ✅ | your_password |
+
+### 選擇性設定
+| 變數名稱 | 說明 | 預設值 | 範例 |
+|---------|------|--------|------|
+| TEST_MODE | 啟用測試模式 | true | true/false |
+| ENABLE_CRON | 啟用排程執行 | true | true/false |
 
 ## 📝 日誌系統
 

@@ -42,7 +42,7 @@ ENV PATH="${POETRY_HOME}/bin:$PATH"
 
 # Copy project files
 COPY pyproject.toml poetry.lock README.md README_zh-TW.md ./
-COPY .env ./
+# COPY .env ./
 
 # Regenerate lock file and install dependencies
 RUN poetry lock --no-update \

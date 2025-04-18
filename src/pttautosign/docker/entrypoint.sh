@@ -50,6 +50,52 @@ export PYPTT_DISABLE_LOGS=1
 mkdir -p /var/log
 touch /var/log/cron.log
 
+# Check required environment variables
+echo "Checking required environment variables..."
+missing_vars=0
+
+if [ -z "$PTT_USERNAME" ]; then
+    echo "ERROR: PTT_USERNAME is not set. Please provide it when running the container with -e PTT_USERNAME=your_username"
+    missing_vars=$((missing_vars + 1))
+fi
+
+if [ -z "$PTT_PASSWORD" ]; then
+    echo "ERROR: PTT_PASSWORD is not set. Please provide it when running the container with -e PTT_PASSWORD=your_password"
+    missing_vars=$((missing_vars + 1))
+fi
+
+if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+    echo "ERROR: TELEGRAM_BOT_TOKEN is not set. Please provide it with -e TELEGRAM_BOT_TOKEN=your_bot_token"
+    missing_vars=$((missing_vars + 1))
+fi
+
+if [ -z "$TELEGRAM_CHAT_ID" ]; then
+    echo "ERROR: TELEGRAM_CHAT_ID is not set. Please provide it with -e TELEGRAM_CHAT_ID=your_chat_id"
+    missing_vars=$((missing_vars + 1))
+fi
+
+if [ $missing_vars -gt 0 ]; then
+    echo ""
+    echo "Example usage:"
+    echo "docker run -d \\"
+    echo "  --name ptt-auto-sign \\"
+    echo "  --restart unless-stopped \\"
+    echo "  -e PTT_USERNAME=your_username \\"
+    echo "  -e PTT_PASSWORD=your_password \\"
+    echo "  -e TELEGRAM_BOT_TOKEN=your_bot_token \\"
+    echo "  -e TELEGRAM_CHAT_ID=your_chat_id \\"
+    echo "  crazycat836/pttautosign:latest"
+    echo ""
+    echo "Alternatively, you can use an .env file:"
+    echo "docker run -d \\"
+    echo "  --name ptt-auto-sign \\"
+    echo "  --restart unless-stopped \\"
+    echo "  --env-file .env \\"
+    echo "  crazycat836/pttautosign:latest"
+    echo ""
+    exit 1
+fi
+
 # Copy .env file if it exists
 if [ -f "/app/.env" ]; then
     echo "Using existing .env file"

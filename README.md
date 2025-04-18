@@ -43,6 +43,17 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 
 3. Run container:
    ```bash
+   # Option 1: Using environment variables directly
+   docker run -d \
+     --name ptt-auto-sign \
+     --restart unless-stopped \
+     -e PTT_USERNAME=your_username \
+     -e PTT_PASSWORD=your_password \
+     -e TELEGRAM_BOT_TOKEN=your_bot_token \
+     -e TELEGRAM_CHAT_ID=your_chat_id \
+     crazycat836/pttautosign:latest
+     
+   # Option 2: Using an .env file
    docker run -d \
      --name ptt-auto-sign \
      --restart unless-stopped \
@@ -84,14 +95,20 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 ### Telegram Settings
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
-| bot_token | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
-| chat_id | Channel or Group ID for notifications | ✅ | -1001234567890 |
+| TELEGRAM_BOT_TOKEN | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
+| TELEGRAM_CHAT_ID | Channel or Group ID for notifications | ✅ | -1001234567890 |
 
 ### PTT Account Settings
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
-| ptt_id_1 | Primary account | ✅ | username,password |
-| ptt_id_2 ~ ptt_id_5 | Additional accounts | ❌ | username,password or none,none |
+| PTT_USERNAME | PTT account username | ✅ | your_username |
+| PTT_PASSWORD | PTT account password | ✅ | your_password |
+
+### Optional Settings
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| TEST_MODE | Enable test mode | true | true/false |
+| ENABLE_CRON | Enable scheduled execution | true | true/false |
 
 ## 📝 Logging
 
