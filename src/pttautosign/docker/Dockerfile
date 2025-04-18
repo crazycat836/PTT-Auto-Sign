@@ -4,19 +4,16 @@ FROM python:3.11-slim
 # Set build arguments for environment variables
 ARG TEST_MODE=true
 ARG ENABLE_CRON=true
-ARG DIRECT_EXEC=true
 
-# Set environment variables
+# 只保留核心必要的環境變數
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    POETRY_VERSION=1.7.1 \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_CACHE_DIR='/var/cache/pypoetry' \
     TEST_MODE=${TEST_MODE} \
     ENABLE_CRON=${ENABLE_CRON} \
-    DIRECT_EXEC=${DIRECT_EXEC}
+    PTT_USERNAME="" \
+    PTT_PASSWORD="" \
+    TELEGRAM_BOT_TOKEN="" \
+    TELEGRAM_CHAT_ID=""
 
 # 設定時區
 ENV TZ=Asia/Taipei
@@ -34,25 +31,15 @@ RUN apt-get update \
         procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | POETRY_VERSION=${POETRY_VERSION} python3 -
+# 使用pip直接安裝套件，簡化依賴安裝
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir poetry && \
+    poetry export -f requirements.txt --output requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir telnetlib3
 
-# Add Poetry to PATH
-ENV PATH="${POETRY_HOME}/bin:$PATH"
-
-# Copy project files
-COPY pyproject.toml poetry.lock README.md README_zh-TW.md ./
-# COPY .env ./
-
-# Regenerate lock file and install dependencies
-RUN poetry lock --no-update \
-    && poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction --no-ansi
-
-# Copy the rest of the application
+# Copy the application code
 COPY src/ ./src/
-
-# Copy script files to their proper locations
 COPY scripts/ ./scripts/
 
 # Copy Docker-specific files
@@ -66,9 +53,6 @@ RUN mkdir -p /app/scripts /app/data /var/log
 RUN chmod +x /entrypoint.sh /usr/local/bin/random_cron.sh \
     && find /app/scripts -type f -name "*.sh" -exec chmod +x {} \;
 
-# Install the package in development mode
-RUN pip install -e .
-
 # Set environment variables for the application
 ENV PYTHONPATH=/app
 
@@ -76,7 +60,6 @@ ENV PYTHONPATH=/app
 RUN echo "Build info:" && \
     echo "TEST_MODE: ${TEST_MODE}" && \
     echo "ENABLE_CRON: ${ENABLE_CRON}" && \
-    echo "DIRECT_EXEC: ${DIRECT_EXEC}" && \
     echo "Python version:" && python --version
 
 # Expose port for health check
