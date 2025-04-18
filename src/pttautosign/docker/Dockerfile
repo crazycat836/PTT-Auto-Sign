@@ -1,10 +1,12 @@
 # Use Python 3.11 slim image
 FROM python:3.11-slim
 
-# 只保留核心必要的環境變數
+# Python 系統設定 (不需使用者配置)
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PTT_USERNAME="" \
+    PYTHONDONTWRITEBYTECODE=1
+
+# 需要使用者提供的環境變數 (默認為空，運行時必須提供)
+ENV PTT_USERNAME="" \
     PTT_PASSWORD="" \
     TELEGRAM_BOT_TOKEN="" \
     TELEGRAM_CHAT_ID=""
