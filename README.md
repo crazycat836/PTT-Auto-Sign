@@ -181,7 +181,8 @@ pttautosign/
 
 4. Python 3.13 Compatibility
    - The project includes a compatibility layer for the `telnetlib` module which was removed in Python 3.13
-   - If you encounter issues with `telnetlib`, ensure the `monkey_patch.py` file is properly loaded before importing PyPtt
+   - The compatibility is automatically handled through the patches module
+   - No additional steps are required as the Docker image includes all necessary components
 
 ## 🤝 Contributing
 

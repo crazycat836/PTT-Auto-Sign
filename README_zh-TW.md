@@ -181,7 +181,8 @@ pttautosign/
 
 4. Python 3.13 相容性問題
    - 專案包含了 `telnetlib` 模組的相容層，該模組在 Python 3.13 中已被移除
-   - 如果遇到 `telnetlib` 相關問題，請確保在導入 PyPtt 前已正確載入 `monkey_patch.py` 檔案
+   - 相容性問題已通過 patches 模組自動處理
+   - Docker 映像已包含所有必要元件，無需額外設定
 
 ## 🤝 貢獻指南
 
