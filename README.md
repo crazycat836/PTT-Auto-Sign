@@ -108,7 +108,7 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
 | TEST_MODE | Enable test mode | true | true/false |
-| ENABLE_CRON | Enable scheduled execution | true | true/false |
+| ENABLE_CRON | Enable internal cron scheduler (set to false if using external schedulers like Kubernetes CronJobs) | true | true/false |
 | DIRECT_EXEC | Enable direct execution mode (skip cron setup) | false | true/false |
 
 ## 📝 Logging

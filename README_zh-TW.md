@@ -108,7 +108,7 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 | 變數名稱 | 說明 | 預設值 | 範例 |
 |---------|------|--------|------|
 | TEST_MODE | 啟用測試模式 | true | true/false |
-| ENABLE_CRON | 啟用排程執行 | true | true/false |
+| ENABLE_CRON | 啟用內部 cron 排程器（如使用外部排程器如 Kubernetes CronJobs 時可設為 false） | true | true/false |
 | DIRECT_EXEC | 啟用直接執行模式（跳過 cron 設置） | false | true/false |
 
 ## 📝 日誌系統
