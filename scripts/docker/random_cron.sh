@@ -3,6 +3,10 @@
 # 功能：在 Docker 環境中設置 cron 任務
 # 用途：根據模式設置不同的執行頻率（測試模式：每分鐘一次；正式模式：每天隨機一次）
 
+# 默認設置為生產模式（TEST_MODE=false）
+export TEST_MODE=false
+export DIRECT_EXEC=false
+
 # Set timezone
 export TZ=Asia/Taipei
 

@@ -1,17 +1,9 @@
 # Use Python 3.11 slim image
 FROM python:3.11-slim
 
-# Set build arguments for environment variables
-ARG TEST_MODE=true
-ARG ENABLE_CRON=true
-ARG DIRECT_EXEC=false
-
 # 只保留核心必要的環境變數
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    TEST_MODE=${TEST_MODE} \
-    ENABLE_CRON=${ENABLE_CRON} \
-    DIRECT_EXEC=${DIRECT_EXEC} \
     PTT_USERNAME="" \
     PTT_PASSWORD="" \
     TELEGRAM_BOT_TOKEN="" \
@@ -60,9 +52,6 @@ ENV PYTHONPATH=/app
 
 # Print build information
 RUN echo "Build info:" && \
-    echo "TEST_MODE: ${TEST_MODE}" && \
-    echo "ENABLE_CRON: ${ENABLE_CRON}" && \
-    echo "DIRECT_EXEC: ${DIRECT_EXEC}" && \
     echo "Python version:" && python --version
 
 # Expose port for health check

@@ -55,22 +55,22 @@ echo "Checking required environment variables..."
 missing_vars=0
 
 if [ -z "$PTT_USERNAME" ]; then
-    echo "ERROR: PTT_USERNAME is not set. Please provide it when running the container with -e PTT_USERNAME=your_username"
+    echo "ERROR: PTT_USERNAME is empty. Please provide it when running the container with -e PTT_USERNAME=your_username"
     missing_vars=$((missing_vars + 1))
 fi
 
 if [ -z "$PTT_PASSWORD" ]; then
-    echo "ERROR: PTT_PASSWORD is not set. Please provide it when running the container with -e PTT_PASSWORD=your_password"
+    echo "ERROR: PTT_PASSWORD is empty. Please provide it when running the container with -e PTT_PASSWORD=your_password"
     missing_vars=$((missing_vars + 1))
 fi
 
 if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-    echo "ERROR: TELEGRAM_BOT_TOKEN is not set. Please provide it with -e TELEGRAM_BOT_TOKEN=your_bot_token"
+    echo "ERROR: TELEGRAM_BOT_TOKEN is empty. Please provide it with -e TELEGRAM_BOT_TOKEN=your_bot_token"
     missing_vars=$((missing_vars + 1))
 fi
 
 if [ -z "$TELEGRAM_CHAT_ID" ]; then
-    echo "ERROR: TELEGRAM_CHAT_ID is not set. Please provide it with -e TELEGRAM_CHAT_ID=your_chat_id"
+    echo "ERROR: TELEGRAM_CHAT_ID is empty. Please provide it with -e TELEGRAM_CHAT_ID=your_chat_id"
     missing_vars=$((missing_vars + 1))
 fi
 
@@ -114,8 +114,6 @@ TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
 TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 
 # Cron Settings
-ENABLE_CRON=${ENABLE_CRON:-true}
-TEST_MODE=${TEST_MODE:-true}  # Default to test mode
 CRON_DATA_DIR=/app/data
 EOL
 fi
@@ -159,31 +157,29 @@ else
 fi
 
 # Set up cron job if enabled
-if [ "$ENABLE_CRON" = "true" ]; then
-    echo "Setting up cron job using random_cron.sh..."
-    echo "Running in test mode: will execute every minute for 5 times"
-    
-    # Run random_cron.sh to setup the cron job
-    /usr/local/bin/random_cron.sh
-    
-    # Start cron service
-    echo "Starting cron service..."
-    service cron start
-    
-    # Check cron service status
-    if service cron status > /dev/null 2>&1; then
-        echo "Cron service started successfully"
-        echo "Cron jobs configured:"
-        crontab -l
-        echo "Monitoring cron logs..."
-        # Show cron logs with timestamps
-        tail -f /var/log/cron.log | while read line; do
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $line"
-        done &
-    else
-        echo "Failed to start cron service"
-        exit 1
-    fi
+echo "Setting up cron job using random_cron.sh..."
+echo "Running in test mode: will execute every minute for 5 times"
+
+# Run random_cron.sh to setup the cron job
+/usr/local/bin/random_cron.sh
+
+# Start cron service
+echo "Starting cron service..."
+service cron start
+
+# Check cron service status
+if service cron status > /dev/null 2>&1; then
+    echo "Cron service started successfully"
+    echo "Cron jobs configured:"
+    crontab -l
+    echo "Monitoring cron logs..."
+    # Show cron logs with timestamps
+    tail -f /var/log/cron.log | while read line; do
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $line"
+    done &
+else
+    echo "Failed to start cron service"
+    exit 1
 fi
 
 # Run the application in the background

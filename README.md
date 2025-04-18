@@ -104,13 +104,6 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 | PTT_USERNAME | PTT account username | ✅ | your_username |
 | PTT_PASSWORD | PTT account password | ✅ | your_password |
 
-### Optional Settings
-| Variable | Description | Default | Example |
-|----------|-------------|---------|---------|
-| TEST_MODE | Enable test mode | true | true/false |
-| ENABLE_CRON | Enable internal cron scheduler (set to false if using external schedulers like Kubernetes CronJobs) | true | true/false |
-| DIRECT_EXEC | Enable direct execution mode (skip cron setup) | false | true/false |
-
 ## 📝 Logging
 
 ### Log Levels
