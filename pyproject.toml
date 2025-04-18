@@ -5,7 +5,7 @@ description = "PTT Auto Sign - Automatically sign in to PTT BBS"
 authors = ["CrazyCat <crazycat836@gmail.com>"]
 readme = "README.md"
 packages = [{include = "pttautosign", from = "src"}]
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/crazycat836/PTTAutoSign"
 documentation = "https://github.com/crazycat836/PTTAutoSign/blob/main/README.md"
 keywords = ["ptt", "bbs", "automation", "sign-in"]
