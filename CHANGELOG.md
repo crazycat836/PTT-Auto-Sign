@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.2.0
+- Simplified Docker configuration with cleaner environment variables
+- Removed unnecessary configuration options (TEST_MODE, ENABLE_CRON, DIRECT_EXEC)
+- Improved entrypoint script to verify parameters immediately on container startup
+- Enhanced documentation with clearer instructions for Docker deployment
+- Separated system Python settings from user-configurable environment variables
+- Optimized random cron job scheduling for more reliable execution
+
 ## v1.1.1
 - Fixed Python command in Docker environment (changed from `python` to `python3`)
 
