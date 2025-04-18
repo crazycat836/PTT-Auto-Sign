@@ -62,14 +62,14 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 
 ### 本地開發
 
-1. 安裝 Python 3.13+ 和 Poetry：
+1. 安裝 Python 3.11+ 和 Poetry：
    ```bash
    # macOS
-   brew install python@3.13 poetry
+   brew install python@3.11 poetry
    
    # Ubuntu/Debian
    sudo apt update
-   sudo apt install python3.13
+   sudo apt install python3.11
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
@@ -113,22 +113,7 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 
 所有日誌僅輸出到控制台，不會在本地創建日誌檔案。
 
-## 🧪 測試
-
-專案包含全面的測試套件，確保程式碼品質和可靠性。
-
-### 執行測試
-
-```bash
-# 執行所有測試
-poetry run pytest
-
-# 執行測試並產生覆蓋率報告
-poetry run pytest --cov=. --cov-report=term-missing
-
-# 執行特定測試檔案
-poetry run pytest tests/test_telegram.py
-```
+## 🛠️ 開發
 
 ### 程式碼格式化
 

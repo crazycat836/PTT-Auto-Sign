@@ -63,14 +63,14 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 
 ### Local Development
 
-1. Install Python 3.13+ and Poetry:
+1. Install Python 3.11+ and Poetry:
    ```bash
    # macOS
-   brew install python@3.13 poetry
+   brew install python@3.11 poetry
    
    # Ubuntu/Debian
    sudo apt update
-   sudo apt install python3.13
+   sudo apt install python3.11
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
@@ -114,22 +114,7 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 
 All logs are output to the console only. No log files are created locally.
 
-## 🧪 Testing
-
-The project includes a comprehensive test suite to ensure code quality and reliability.
-
-### Running Tests
-
-```bash
-# Run all tests
-poetry run pytest
-
-# Run tests with coverage report
-poetry run pytest --cov=. --cov-report=term-missing
-
-# Run specific test file
-poetry run pytest tests/test_telegram.py
-```
+## 🛠️ Development
 
 ### Code Formatting
 
