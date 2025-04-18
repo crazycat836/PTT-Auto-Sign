@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/issues)
 [![Release](https://img.shields.io/github/v/release/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.13%2B-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.11-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker Pulls](https://img.shields.io/docker/pulls/crazycat836/pttautosign?style=for-the-badge&color=5D6D7E)](https://hub.docker.com/r/crazycat836/pttautosign)
 
 English | [繁體中文](README_zh-TW.md)
@@ -19,7 +19,7 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 - 📝 Comprehensive logging system
 - ⚙️ Flexible environment variable configuration
 - 🔒 Secure account management
-- 🐍 Python 3.13 support with telnetlib compatibility layer
+- 🐍 Python 3.11 support
 - 🧪 Comprehensive test suite with high code coverage
 - 🏗️ Modular code architecture for maintainability
 
@@ -149,7 +149,6 @@ poetry run isort .
 pttautosign/
 ├── config.py           # Configuration classes and functions
 ├── main.py             # Main entry point
-├── monkey_patch.py     # Telnetlib compatibility layer for Python 3.13
 ├── utils/
 │   ├── __init__.py
 │   ├── logger.py       # Logging configuration
@@ -178,11 +177,6 @@ pttautosign/
    - Verify bot_token is valid
    - Check chat_id is correct
    - Ensure Bot is added to group/channel
-
-4. Python 3.13 Compatibility
-   - The project includes a compatibility layer for the `telnetlib` module which was removed in Python 3.13
-   - The compatibility is automatically handled through the patches module
-   - No additional steps are required as the Docker image includes all necessary components
 
 ## 🤝 Contributing
 

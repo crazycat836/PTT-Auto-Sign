@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/issues)
 [![Release](https://img.shields.io/github/v/release/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.13%2B-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.11-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker Pulls](https://img.shields.io/docker/pulls/crazycat836/pttautosign?style=for-the-badge&color=5D6D7E)](https://hub.docker.com/r/crazycat836/pttautosign)
 
 [English](README.md) | 繁體中文
@@ -19,8 +19,7 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 - 📝 完整的日誌記錄系統
 - ⚙️ 彈性的環境變數配置
 - 🔒 安全的帳號管理機制
-- 🐍 支援 Python 3.13 並提供 telnetlib 相容層
-- 🧪 全面的測試套件，確保程式碼品質
+- 🐍 支援 Python 3.11
 - 🏗️ 模組化架構設計，提高可維護性
 
 ## 🚀 快速開始
@@ -149,7 +148,6 @@ poetry run isort .
 pttautosign/
 ├── config.py           # 配置類別和函數
 ├── main.py             # 主程式進入點
-├── monkey_patch.py     # Python 3.13 的 telnetlib 相容層
 ├── utils/
 │   ├── __init__.py
 │   ├── logger.py       # 日誌配置
@@ -178,11 +176,6 @@ pttautosign/
    - 確認 bot_token 是否有效
    - 檢查 chat_id 是否正確
    - 確認 Bot 是否已加入群組/頻道
-
-4. Python 3.13 相容性問題
-   - 專案包含了 `telnetlib` 模組的相容層，該模組在 Python 3.13 中已被移除
-   - 相容性問題已通過 patches 模組自動處理
-   - Docker 映像已包含所有必要元件，無需額外設定
 
 ## 🤝 貢獻指南
 

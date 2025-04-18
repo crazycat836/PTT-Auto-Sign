@@ -7,6 +7,7 @@
 - Enhanced documentation with clearer instructions for Docker deployment
 - Separated system Python settings from user-configurable environment variables
 - Optimized random cron job scheduling for more reliable execution
+- Focused support on Python 3.11, removing Python 3.13 compatibility layer
 
 ## v1.1.1
 - Fixed Python command in Docker environment (changed from `python` to `python3`)

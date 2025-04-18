@@ -80,7 +80,7 @@ pyptt_logger.setLevel(logging.CRITICAL)  # Set to CRITICAL to suppress most logs
 # Import our patches before importing any PyPtt related modules
 logger.info("PTT 自動簽到程式啟動")
 logger.debug("正在套用相容性修補...")
-from pttautosign.patches import monkey_patch, pyptt_patch
+from pttautosign.patches import pyptt_patch
 logger.debug("修補套用完成")
 
 # Load environment variables from .env file for local development
