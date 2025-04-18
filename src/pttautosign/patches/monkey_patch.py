@@ -4,22 +4,94 @@ This module creates a fake telnetlib module in sys.modules.
 """
 
 import sys
-import asyncio
-import threading
+import socket
 import time
 import logging
-from typing import Optional, Union, Any
-
-# Use our fake telnetlib3 module
-from pttautosign.patches.fake_telnetlib3 import open_connection
+from typing import Optional, Union, Any, List, Tuple
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
+# Define telnet constants as bytes
+BINARY = bytes([0])
+ECHO = bytes([1])
+RCP = bytes([2])
+SGA = bytes([3])
+NAMS = bytes([4])
+STATUS = bytes([5])
+TM = bytes([6])
+RCTE = bytes([7])
+NAOL = bytes([8])
+NAOP = bytes([9])
+NAOCRD = bytes([10])
+NAOHTS = bytes([11])
+NAOHTD = bytes([12])
+NAOFFD = bytes([13])
+NAOVTS = bytes([14])
+NAOVTD = bytes([15])
+NAOLFD = bytes([16])
+XASCII = bytes([17])
+LOGOUT = bytes([18])
+BM = bytes([19])
+DET = bytes([20])
+SUPDUP = bytes([21])
+SUPDUPOUTPUT = bytes([22])
+SNDLOC = bytes([23])
+TTYPE = bytes([24])
+EOR = bytes([25])
+TUID = bytes([26])
+OUTMRK = bytes([27])
+TTYLOC = bytes([28])
+VT3270REGIME = bytes([29])
+X3PAD = bytes([30])
+NAWS = bytes([31])
+TSPEED = bytes([32])
+LFLOW = bytes([33])
+LINEMODE = bytes([34])
+XDISPLOC = bytes([35])
+OLD_ENVIRON = bytes([36])
+AUTHENTICATION = bytes([37])
+ENCRYPT = bytes([38])
+NEW_ENVIRON = bytes([39])
+TN3270E = bytes([40])
+XAUTH = bytes([41])
+CHARSET = bytes([42])
+RSP = bytes([43])
+COM_PORT_OPTION = bytes([44])
+SUPPRESS_LOCAL_ECHO = bytes([45])
+TLS = bytes([46])
+KERMIT = bytes([47])
+SEND_URL = bytes([48])
+FORWARD_X = bytes([49])
+PRAGMA_LOGON = bytes([138])
+SSPI_LOGON = bytes([139])
+PRAGMA_HEARTBEAT = bytes([140])
+EXOPL = bytes([255])
+NOOPT = bytes([0])
+
+SE = bytes([240])
+NOP = bytes([241])
+DM = bytes([242])
+BRK = bytes([243])
+IP = bytes([244])
+AO = bytes([245])
+AYT = bytes([246])
+EC = bytes([247])
+EL = bytes([248])
+GA = bytes([249])
+SB = bytes([250])
+WILL = bytes([251])
+WONT = bytes([252])
+DO = bytes([253])
+DONT = bytes([254])
+IAC = bytes([255])
+
+theNULL = bytes([0])
+
 class Telnet:
     """
-    Telnet interface class that mimics the API of the original telnetlib.Telnet class
-    but uses telnetlib3 under the hood.
+    Basic Telnet interface class compatible with the original telnetlib.Telnet API.
+    Simplified version for PTT connection.
     """
     
     def __init__(self, host: Optional[str] = None, port: int = 23, 
@@ -34,14 +106,12 @@ class Telnet:
         self.host = host
         self.port = port
         self.timeout = timeout
-        self._reader = None
-        self._writer = None
-        self._loop = None
-        self._thread = None
-        self._buffer = b""
-        self._connected = False
-        self._connection_event = threading.Event()
-        self._connection_error = None
+        self.sock = None
+        self.rawq = b""
+        self.irawq = 0
+        self.cookedq = b""
+        self.eof = False
+        self.option_callback = None
         
         logger.debug(f"Telnet object initialized with host={host}, port={port}, timeout={timeout}")
         
@@ -66,63 +136,16 @@ class Telnet:
         self.port = port
         self.timeout = timeout
         
-        # Reset connection state
-        self._connection_event.clear()
-        self._connection_error = None
-        
-        # Keep track of whether we're in PyPtt module
-        in_pyptt_module = False
-        
-        # Create a new event loop for this connection
-        self._loop = asyncio.new_event_loop()
-        
-        # Connect in a separate thread
-        self._thread = threading.Thread(target=self._connect_thread, name=f"Telnet-{host}:{port}")
-        self._thread.daemon = True
-        self._thread.start()
-        
-        # Wait for connection to be established or timeout
-        timeout_value = timeout if timeout is not None else 30  # Default timeout
-        if not self._connection_event.wait(timeout=timeout_value):
-            logger.error(f"Connection to {host}:{port} timed out after {timeout_value} seconds")
-            raise TimeoutError(f"Connection to {host}:{port} timed out after {timeout_value} seconds")
-        
-        # Check if there was an error during connection
-        if self._connection_error:
-            logger.error(f"Connection to {host}:{port} failed: {self._connection_error}")
-            raise self._connection_error
-        
-        logger.info(f"Successfully connected to {host}:{port}")
-    
-    def _connect_thread(self) -> None:
-        """Thread function to run the event loop and connect."""
         try:
-            asyncio.set_event_loop(self._loop)
-            
-            async def connect():
-                try:
-                    logger.debug(f"Attempting to connect to {self.host}:{self.port}")
-                    self._reader, self._writer = await open_connection(
-                        self.host, self.port, connect_minwait=0.05
-                    )
-                    self._connected = True
-                    logger.debug(f"Connection established to {self.host}:{self.port}")
-                    self._connection_event.set()
-                    
-                    # Keep the connection alive
-                    while self._connected:
-                        await asyncio.sleep(0.1)
-                except Exception as e:
-                    logger.error(f"Error connecting to {self.host}:{self.port}: {e}")
-                    self._connection_error = ConnectionError(f"Telnet connection error: {e}")
-                    self._connection_event.set()
-                    self._connected = False
-            
-            self._loop.run_until_complete(connect())
-        except Exception as e:
-            logger.error(f"Error in connect thread: {e}")
-            self._connection_error = ConnectionError(f"Thread error: {e}")
-            self._connection_event.set()
+            self.sock = socket.create_connection((host, port), timeout)
+            self.sock.settimeout(timeout)
+            logger.info(f"Successfully connected to {host}:{port}")
+        except socket.timeout:
+            logger.error(f"Connection to {host}:{port} timed out")
+            raise TimeoutError(f"Connection to {host}:{port} timed out")
+        except socket.error as e:
+            logger.error(f"Connection to {host}:{port} failed: {e}")
+            raise ConnectionError(f"Connection to {host}:{port} failed: {e}")
     
     def read_until(self, expected: bytes, timeout: Optional[Union[int, float]] = None) -> bytes:
         """Read until a given byte string is encountered or until timeout.
@@ -137,7 +160,7 @@ class Telnet:
         Raises:
             ConnectionError: If not connected
         """
-        if not self._connected:
+        if self.sock is None:
             logger.error("Attempted to read from closed connection")
             raise ConnectionError("Not connected")
         
@@ -146,23 +169,33 @@ class Telnet:
         timeout_value = timeout if timeout is not None else self.timeout
         
         while True:
-            if expected in self._buffer:
-                index = self._buffer.find(expected) + len(expected)
-                result = self._buffer[:index]
-                self._buffer = self._buffer[index:]
+            # Check for expected pattern in cookedq
+            index = self.cookedq.find(expected)
+            if index >= 0:
+                index = index + len(expected)
+                result = self.cookedq[:index]
+                self.cookedq = self.cookedq[index:]
                 logger.debug(f"Found expected pattern, returning {len(result)} bytes")
                 return result
             
             # Check for timeout
-            if timeout_value and time.time() - start_time > timeout_value:
+            if timeout_value is not None and time.time() - start_time > timeout_value:
                 logger.debug(f"Timeout reached after {time.time() - start_time:.2f} seconds")
-                result = self._buffer
-                self._buffer = b""
+                result = self.cookedq
+                self.cookedq = b""
                 return result
             
-            # Get more data
-            self._read_more()
-            time.sleep(0.05)
+            # Read more data
+            self._read_from_socket()
+            
+            # Check for EOF
+            if self.eof:
+                result = self.cookedq
+                self.cookedq = b""
+                return result
+            
+            # Small sleep to prevent CPU hogging
+            time.sleep(0.01)
     
     def read_all(self) -> bytes:
         """Read all data until EOF.
@@ -173,13 +206,18 @@ class Telnet:
         Raises:
             ConnectionError: If not connected
         """
-        if not self._connected:
+        if self.sock is None:
             logger.error("Attempted to read from closed connection")
             raise ConnectionError("Not connected")
         
         logger.debug("Reading all data")
-        result = self._buffer
-        self._buffer = b""
+        
+        # Read until EOF
+        while not self.eof:
+            self._read_from_socket()
+        
+        result = self.cookedq
+        self.cookedq = b""
         return result
     
     def read_some(self) -> bytes:
@@ -191,50 +229,40 @@ class Telnet:
         Raises:
             ConnectionError: If not connected
         """
-        if not self._connected:
+        if self.sock is None:
             logger.error("Attempted to read from closed connection")
             raise ConnectionError("Not connected")
         
         logger.debug("Reading some data")
-        if not self._buffer:
-            self._read_more()
         
-        result = self._buffer
-        self._buffer = b""
+        if not self.cookedq and not self.eof:
+            self._read_from_socket()
+        
+        result = self.cookedq
+        self.cookedq = b""
         return result
     
-    def _read_more(self) -> None:
-        """Read more data from the connection."""
-        if not self._connected:
+    def _read_from_socket(self) -> None:
+        """Read more data from the socket."""
+        if self.sock is None:
             return
-            
-        async def read_data():
-            try:
-                logger.debug("Reading more data from connection")
-                data = await asyncio.wait_for(
-                    self._reader.read(1024),
-                    timeout=self.timeout if self.timeout is not None else 30
-                )
-                if data:
-                    encoded_data = data.encode('utf-8')
-                    self._buffer += encoded_data
-                    logger.debug(f"Read {len(encoded_data)} bytes")
-                else:
-                    logger.debug("No data read from connection")
-            except asyncio.TimeoutError:
-                logger.debug("Timeout while reading data")
-            except Exception as e:
-                logger.error(f"Error reading data: {e}")
-                self._connected = False
-                raise ConnectionError(f"Error reading data: {e}")
         
         try:
-            future = asyncio.run_coroutine_threadsafe(read_data(), self._loop)
-            future.result(timeout=self.timeout if self.timeout is not None else 30)
-        except Exception as e:
-            logger.debug(f"Exception during read: {e}")
-            # Ignore timeout errors during read
-            pass
+            data = self.sock.recv(2048)
+            logger.debug(f"Read {len(data)} bytes from socket")
+            
+            if not data:
+                self.eof = True
+                logger.debug("EOF received from socket")
+            else:
+                self.cookedq += data
+                
+        except socket.timeout:
+            logger.debug("Timeout reading from socket")
+        except socket.error as e:
+            logger.error(f"Error reading from socket: {e}")
+            self.eof = True
+            raise ConnectionError(f"Error reading from socket: {e}")
     
     def write(self, buffer: bytes) -> None:
         """Write a string to the socket.
@@ -245,87 +273,123 @@ class Telnet:
         Raises:
             ConnectionError: If not connected or write fails
         """
-        if not self._connected:
+        if self.sock is None:
             logger.error("Attempted to write to closed connection")
             raise ConnectionError("Not connected")
         
-        logger.debug(f"Writing {len(buffer)} bytes to connection")
-        
-        async def write_data():
-            try:
-                decoded_data = buffer.decode('utf-8', errors='replace')
-                self._writer.write(decoded_data)
-                await self._writer.drain()
-                logger.debug(f"Successfully wrote {len(buffer)} bytes")
-            except Exception as e:
-                logger.error(f"Error writing data: {e}")
-                self._connected = False
-                raise ConnectionError(f"Error writing data: {e}")
+        logger.debug(f"Writing {len(buffer)} bytes to socket")
         
         try:
-            future = asyncio.run_coroutine_threadsafe(write_data(), self._loop)
-            future.result(timeout=self.timeout if self.timeout is not None else 30)
-        except Exception as e:
-            logger.error(f"Failed to write data: {e}")
-            raise ConnectionError(f"Failed to write data: {e}")
+            self.sock.sendall(buffer)
+            logger.debug(f"Successfully wrote {len(buffer)} bytes")
+        except socket.error as e:
+            logger.error(f"Error writing to socket: {e}")
+            raise ConnectionError(f"Error writing to socket: {e}")
     
     def close(self) -> None:
         """Close the connection."""
-        if self._connected:
+        if self.sock:
             logger.debug(f"Closing connection to {self.host}:{self.port}")
             
-            async def close_connection():
-                try:
-                    self._writer.close()
-                    await self._writer.wait_closed()
-                    logger.debug("Connection closed successfully")
-                except Exception as e:
-                    logger.debug(f"Error during close: {e}")
-                    pass  # Ignore errors during close
-            
             try:
-                future = asyncio.run_coroutine_threadsafe(close_connection(), self._loop)
-                future.result(timeout=self.timeout if self.timeout is not None else 5)
+                self.sock.close()
             except Exception as e:
-                logger.debug(f"Exception during close: {e}")
-                pass  # Ignore timeout errors during close
+                logger.debug(f"Error during close: {e}")
             
-            self._connected = False
-            
-            # Stop the event loop
-            try:
-                self._loop.call_soon_threadsafe(self._loop.stop)
-            except Exception as e:
-                logger.debug(f"Error stopping event loop: {e}")
-            
-            # Wait for the thread to finish
-            if self._thread and self._thread.is_alive():
-                self._thread.join(timeout=1)
-                if self._thread.is_alive():
-                    logger.warning(f"Thread for {self.host}:{self.port} did not terminate")
-            
-            # Close the event loop
-            if self._loop and not self._loop.is_closed():
-                try:
-                    self._loop.close()
-                except Exception as e:
-                    logger.debug(f"Error closing event loop: {e}")
-            
-            # Reset attributes
-            self._reader = None
-            self._writer = None
-            self._loop = None
-            self._thread = None
-            self._buffer = b""
-            self._connection_event.clear()
-            
+            self.sock = None
+            self.eof = True
             logger.info(f"Connection to {self.host}:{self.port} closed")
+    
+    def interact(self) -> None:
+        """Interaction function - not implemented."""
+        raise NotImplementedError("The interact method is not implemented.")
+    
+    def mt_interact(self) -> None:
+        """Multithreaded interaction function - not implemented."""
+        raise NotImplementedError("The mt_interact method is not implemented.")
 
 # Create a fake telnetlib module
 class TelnetlibModule:
     def __init__(self):
         self.Telnet = Telnet
-        logger.debug("Telnetlib compatibility layer initialized")
+        
+        # Add all telnet constants to the module
+        self.BINARY = BINARY
+        self.ECHO = ECHO
+        self.RCP = RCP
+        self.SGA = SGA
+        self.NAMS = NAMS
+        self.STATUS = STATUS
+        self.TM = TM
+        self.RCTE = RCTE
+        self.NAOL = NAOL
+        self.NAOP = NAOP
+        self.NAOCRD = NAOCRD
+        self.NAOHTS = NAOHTS
+        self.NAOHTD = NAOHTD
+        self.NAOFFD = NAOFFD
+        self.NAOVTS = NAOVTS
+        self.NAOVTD = NAOVTD
+        self.NAOLFD = NAOLFD
+        self.XASCII = XASCII
+        self.LOGOUT = LOGOUT
+        self.BM = BM
+        self.DET = DET
+        self.SUPDUP = SUPDUP
+        self.SUPDUPOUTPUT = SUPDUPOUTPUT
+        self.SNDLOC = SNDLOC
+        self.TTYPE = TTYPE
+        self.EOR = EOR
+        self.TUID = TUID
+        self.OUTMRK = OUTMRK
+        self.TTYLOC = TTYLOC
+        self.VT3270REGIME = VT3270REGIME
+        self.X3PAD = X3PAD
+        self.NAWS = NAWS
+        self.TSPEED = TSPEED
+        self.LFLOW = LFLOW
+        self.LINEMODE = LINEMODE
+        self.XDISPLOC = XDISPLOC
+        self.OLD_ENVIRON = OLD_ENVIRON
+        self.AUTHENTICATION = AUTHENTICATION
+        self.ENCRYPT = ENCRYPT
+        self.NEW_ENVIRON = NEW_ENVIRON
+        self.TN3270E = TN3270E
+        self.XAUTH = XAUTH
+        self.CHARSET = CHARSET
+        self.RSP = RSP
+        self.COM_PORT_OPTION = COM_PORT_OPTION
+        self.SUPPRESS_LOCAL_ECHO = SUPPRESS_LOCAL_ECHO
+        self.TLS = TLS
+        self.KERMIT = KERMIT
+        self.SEND_URL = SEND_URL
+        self.FORWARD_X = FORWARD_X
+        self.PRAGMA_LOGON = PRAGMA_LOGON
+        self.SSPI_LOGON = SSPI_LOGON
+        self.PRAGMA_HEARTBEAT = PRAGMA_HEARTBEAT
+        self.EXOPL = EXOPL
+        self.NOOPT = NOOPT
+        
+        self.SE = SE
+        self.NOP = NOP
+        self.DM = DM
+        self.BRK = BRK
+        self.IP = IP
+        self.AO = AO
+        self.AYT = AYT
+        self.EC = EC
+        self.EL = EL
+        self.GA = GA
+        self.SB = SB
+        self.WILL = WILL
+        self.WONT = WONT
+        self.DO = DO
+        self.DONT = DONT
+        self.IAC = IAC
+        
+        self.theNULL = theNULL
+        
+        logger.debug("Telnetlib compatibility layer initialized with all constants")
 
 def apply_monkey_patch():
     """Apply the monkey patch for telnetlib."""

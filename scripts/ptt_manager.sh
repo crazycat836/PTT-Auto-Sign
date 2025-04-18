@@ -193,6 +193,15 @@ build_and_push_docker() {
         exit 1
     fi
     
+    # Check if .env file exists for credentials
+    if [ ! -f ".env" ]; then
+        log_debug "Warning: .env file not found, continuing anyway"
+        echo "Warning: .env file not found"
+        echo "The Docker image will be built, but you will need to provide credentials when running it"
+    else
+        log_debug "Using credentials from .env file"
+    fi
+    
     echo "This will build a production Docker image that runs once per day at a random time"
     echo "between 9 AM and 5 PM (Taiwan time)."
     read -p "Continue? (y/n): " confirm
@@ -202,12 +211,30 @@ build_and_push_docker() {
         return
     fi
     
-    # Build and push multi-arch image
-    if docker buildx build --platform linux/amd64,linux/arm64 -t crazycat836/pttautosign:latest -f "$DOCKERFILE_PATH" --push .; then
+    # Build and push multi-arch image with production mode environment variables
+    if docker buildx build \
+        --platform linux/amd64,linux/arm64 \
+        --build-arg TEST_MODE=false \
+        --build-arg ENABLE_CRON=true \
+        --build-arg DIRECT_EXEC=false \
+        -t crazycat836/pttautosign:latest \
+        -f "$DOCKERFILE_PATH" \
+        --push .; then
+        
         log_debug "Successfully built and pushed Docker image"
         echo "Successfully built and pushed Docker image"
         echo "Image: crazycat836/pttautosign:latest"
         echo "This image will run once per day at a random time between 9 AM and 5 PM (Taiwan time)"
+        echo ""
+        echo "To run the image, use:"
+        echo "docker run -d --name pttautosign \\"
+        echo "    -e PTT_ID=your_ptt_id \\"
+        echo "    -e PTT_PASSWORD=your_ptt_password \\"
+        echo "    -e TELEGRAM_BOT_TOKEN=your_telegram_bot_token \\"
+        echo "    -e TELEGRAM_CHAT_ID=your_telegram_chat_id \\"
+        echo "    -e TEST_MODE=false \\"
+        echo "    -e ENABLE_CRON=true \\"
+        echo "    crazycat836/pttautosign:latest"
     else
         log_debug "Error: Failed to build and push Docker image"
         echo "Error: Failed to build and push Docker image"

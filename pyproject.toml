@@ -11,7 +11,7 @@ documentation = "https://github.com/crazycat836/PTTAutoSign/blob/main/README.md"
 keywords = ["ptt", "bbs", "automation", "sign-in"]
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.11"
 pyptt = "^1.0.6"
 python-dotenv = "^1.0.0"
 click = "^8.1.7"
@@ -19,6 +19,7 @@ docker = "^7.0.0"
 python-crontab = "^3.0.0"
 requests = "^2.31.0"
 telnetlib3 = "^1.0.4"
+setuptools = "^78.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

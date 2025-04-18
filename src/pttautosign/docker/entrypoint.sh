@@ -11,6 +11,33 @@ export TZ=Asia/Taipei
 # Create data directory
 mkdir -p /app/data
 
+# Create scripts directory if it doesn't exist
+mkdir -p /app/scripts
+
+# Copy scripts from source if they exist
+if [ -f "/app/scripts/simple_runner.sh" ]; then
+    echo "Scripts already in place"
+else
+    echo "Copying scripts to proper location..."
+    # Copy from the root of the project if available
+    if [ -f "/scripts/simple_runner.sh" ]; then
+        cp /scripts/simple_runner.sh /app/scripts/
+    elif [ -f "/app/src/pttautosign/scripts/simple_runner.sh" ]; then
+        cp /app/src/pttautosign/scripts/simple_runner.sh /app/scripts/
+    else
+        echo "Warning: Could not find simple_runner.sh script"
+        # Create a minimal script that runs the main module
+        cat > /app/scripts/simple_runner.sh << 'EOL'
+#!/bin/bash
+# Simple runner fallback script
+echo "Running PTT Auto Sign from fallback script"
+cd /app
+python -m pttautosign.main
+EOL
+    fi
+    chmod +x /app/scripts/simple_runner.sh
+fi
+
 # Set environment variables
 export PYTHONPATH=/app
 export PYTHONDONTWRITEBYTECODE=1
@@ -21,6 +48,7 @@ export PYPTT_DISABLE_LOGS=1
 
 # Create log directory
 mkdir -p /var/log
+touch /var/log/cron.log
 
 # Copy .env file if it exists
 if [ -f "/app/.env" ]; then
@@ -41,6 +69,8 @@ TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
 
 # Cron Settings
 ENABLE_CRON=${ENABLE_CRON:-true}
+TEST_MODE=${TEST_MODE:-true}  # Default to test mode
+CRON_DATA_DIR=/app/data
 EOL
 fi
 
@@ -84,18 +114,36 @@ fi
 
 # Set up cron job if enabled
 if [ "$ENABLE_CRON" = "true" ]; then
-    echo "Setting up cron job..."
-    # Get random cron schedule
-    CRON_SCHEDULE=$(/usr/local/bin/random_cron.sh)
-    echo "Generated cron schedule: $CRON_SCHEDULE"
+    echo "Setting up cron job using random_cron.sh..."
+    echo "Running in test mode: will execute every minute for 5 times"
     
-    # Add cron job
-    (crontab -l 2>/dev/null | grep -v "pttautosign.main") | crontab -
-    (crontab -l 2>/dev/null; echo "$CRON_SCHEDULE /usr/local/bin/python -m pttautosign.main >> /var/log/ptt_autosign.log 2>&1") | crontab -
+    # Run random_cron.sh to setup the cron job
+    /usr/local/bin/random_cron.sh
     
     # Start cron service
+    echo "Starting cron service..."
     service cron start
+    
+    # Check cron service status
+    if service cron status > /dev/null 2>&1; then
+        echo "Cron service started successfully"
+        echo "Cron jobs configured:"
+        crontab -l
+        echo "Monitoring cron logs..."
+        # Show cron logs with timestamps
+        tail -f /var/log/cron.log | while read line; do
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] $line"
+        done &
+    else
+        echo "Failed to start cron service"
+        exit 1
+    fi
 fi
 
-# Switch to non-root user
-exec su -c "python -m pttautosign.main" pttuser 
+# Run the application in the background
+echo "Starting PTT Auto Sign application..."
+python -m pttautosign.main &
+
+# Keep the container running
+echo "Container is running. Press Ctrl+C to exit."
+tail -f /dev/null 
