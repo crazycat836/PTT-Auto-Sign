@@ -109,6 +109,7 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 |----------|-------------|---------|---------|
 | TEST_MODE | Enable test mode | true | true/false |
 | ENABLE_CRON | Enable scheduled execution | true | true/false |
+| DIRECT_EXEC | Enable direct execution mode (skip cron setup) | false | true/false |
 
 ## 📝 Logging
 
