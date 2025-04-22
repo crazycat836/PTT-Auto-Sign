@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.3.0
+- 程式碼優化與清理：移除未使用的函數和變數
+- 移除 `validate_all_configs()` 函數，簡化配置驗證流程
+- 移除 `LogConfig` 中未使用的 `use_json_format` 和 `include_hostname` 參數
+- 移除 `ptt.py` 中未使用的 `daily_login` 方法別名
+- 移除 `JsonFormatter` 類別和相關功能，集中使用彩色文字格式化
+- 移除 `docker_runner.sh` 中未使用的 `log_initial_config()` 函數
+- 現代化環境變數名稱，更符合 Docker 慣例
+- 簡化PTT帳號管理，支援單一帳號設定模式
+- 改進中文語系支援，包括錯誤訊息和通知內容的本地化
+- 更新文檔與使用說明，提供更清楚的操作指引
+
 ## v1.2.0
 - Simplified Docker configuration with cleaner environment variables
 - Removed unnecessary configuration options (TEST_MODE, ENABLE_CRON, DIRECT_EXEC)

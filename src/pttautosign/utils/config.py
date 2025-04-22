@@ -58,11 +58,11 @@ class TelegramConfig:
         Raises:
             ConfigValidationError: If required environment variables are missing
         """
-        token = os.getenv("bot_token")
-        chat_id = os.getenv("chat_id")
-        disable_notification = os.getenv("disable_notification", "false").lower() == "true"
-        retry_count = int(os.getenv("telegram_retry_count", "3"))
-        timeout = int(os.getenv("telegram_timeout", "10"))
+        token = os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        disable_notification = os.getenv("DISABLE_NOTIFICATIONS", "false").lower() == "true"
+        retry_count = int(os.getenv("TELEGRAM_RETRY_COUNT", "3"))
+        timeout = int(os.getenv("TELEGRAM_TIMEOUT", "10"))
         
         if not token or not chat_id:
             raise ConfigValidationError("Telegram bot token or chat id not set in environment variables")
@@ -108,12 +108,12 @@ class PTTConfig:
         """Initialize error messages after instance creation"""
         if not self.error_messages:
             self.error_messages = {
-                PTT_exceptions.NoSuchUser: "PTT login failed!\nUser not found",
-                PTT_exceptions.WrongIDorPassword: "PTT login failed!\nIncorrect username or password",
-                PTT_exceptions.WrongPassword: "PTT login failed!\nIncorrect password",
-                PTT_exceptions.LoginTooOften: "PTT login failed!\nToo many login attempts",
-                PTT_exceptions.UseTooManyResources: "PTT login failed!\nToo many resources used",
-                PTT_exceptions.UnregisteredUser: "Unregistered user"
+                PTT_exceptions.NoSuchUser: "PTT 登入失敗！\n找不到使用者",
+                PTT_exceptions.WrongIDorPassword: "PTT 登入失敗！\n帳號或密碼錯誤",
+                PTT_exceptions.WrongPassword: "PTT 登入失敗！\n密碼錯誤",
+                PTT_exceptions.LoginTooOften: "PTT 登入失敗！\n登入次數過於頻繁",
+                PTT_exceptions.UseTooManyResources: "PTT 登入失敗！\n系統資源使用過多",
+                PTT_exceptions.UnregisteredUser: "未註冊的使用者"
             }
     
     def validate(self) -> None:
@@ -182,8 +182,6 @@ class LogConfig:
     """Logging configuration"""
     log_format: str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
     log_level: int = logging.INFO
-    use_json_format: bool = False
-    include_hostname: bool = True
     
     def validate(self) -> None:
         """Validate configuration
@@ -206,14 +204,9 @@ class LogConfig:
         log_level_str = os.getenv("log_level", "INFO").upper()
         log_level = getattr(logging, log_level_str, logging.INFO)
         
-        use_json_format = os.getenv("log_json_format", "false").lower() == "true"
-        include_hostname = os.getenv("log_include_hostname", "true").lower() == "true"
-        
         config = cls(
             log_format=log_format,
-            log_level=log_level,
-            use_json_format=use_json_format,
-            include_hostname=include_hostname
+            log_level=log_level
         )
         
         return config
@@ -288,54 +281,12 @@ def get_ptt_accounts() -> List[Tuple[str, str]]:
     """
     accounts = []
     
-    # Check main account
-    main_account = os.getenv("ptt_id_1")
-    if not main_account:
-        raise ConfigValidationError("Main PTT account not set in environment variables")
+    # 檢查標準格式的主帳號
+    ptt_username = os.getenv("PTT_USERNAME")
+    ptt_password = os.getenv("PTT_PASSWORD")
     
-    if main_account.lower() not in ["none", "none,none"]:
-        parts = main_account.split(",")
-        if len(parts) != 2:
-            raise ConfigValidationError(f"Invalid account format for ptt_id_1: {main_account}")
-        username, password = parts
-        if not username or not password:
-            raise ConfigValidationError(f"Username and password cannot be empty for ptt_id_1")
-        accounts.append((username, password))
+    if not ptt_username or not ptt_password:
+        raise ConfigValidationError("No PTT account found. Please set PTT_USERNAME and PTT_PASSWORD environment variables")
     
-    # Check additional accounts
-    for i in range(2, 6):
-        account = os.getenv(f"ptt_id_{i}")
-        if account and account.lower() not in ["none", "none,none"]:
-            parts = account.split(",")
-            if len(parts) != 2:
-                raise ConfigValidationError(f"Invalid account format for ptt_id_{i}: {account}")
-            username, password = parts
-            if not username or not password:
-                raise ConfigValidationError(f"Username and password cannot be empty for ptt_id_{i}")
-            accounts.append((username, password))
-    
-    if not accounts:
-        raise ConfigValidationError("No valid PTT accounts found in environment variables")
-    
-    return accounts
-
-def validate_all_configs() -> None:
-    """Validate all configurations
-    
-    Raises:
-        ConfigValidationError: If any configuration is invalid
-    """
-    # Validate Telegram config
-    TelegramConfig.from_env()
-    
-    # Validate PTT config
-    PTTConfig.from_env()
-    
-    # Validate Log config
-    LogConfig.from_env()
-    
-    # Validate PTT accounts
-    get_ptt_accounts()
-    
-    # If we get here, all configurations are valid
-    return True 
+    accounts.append((ptt_username, ptt_password))
+    return accounts 
