@@ -8,11 +8,11 @@
 
 [English](README.md) | 繁體中文
 
-PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管理和 Telegram 通知功能。透過 Docker 容器化部署，讓你輕鬆實現每日自動簽到，再也不用擔心漏簽。
+PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援 Telegram 通知功能。透過 Docker 容器化部署，讓你輕鬆實現每日自動簽到，再也不用擔心漏簽。
 
 ## 🌟 主要特點
 
-- 🔄 支援多個 PTT 帳號自動簽到
+- 🔄 支援 PTT 帳號自動簽到
 - 📱 整合 Telegram 通知，即時掌握簽到狀態
 - 🐳 Docker 容器化支援，部署更加便捷
 - 🎲 每日隨機執行時間（上午 9 點至下午 5 點）
@@ -20,6 +20,7 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 - ⚙️ 彈性的環境變數配置
 - 🔒 安全的帳號管理機制
 - 🐍 支援 Python 3.11
+- 🌏 完整中文化介面，包含日誌和通知訊息
 - 🏗️ 模組化架構設計，提高可維護性
 
 ## 🚀 快速開始
@@ -31,18 +32,9 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
    docker pull crazycat836/pttautosign:latest
    ```
 
-2. 準備環境變數檔案：
+2. 運行容器：
    ```bash
-   # 複製範例檔案
-   cp .env.example .env
-   
-   # 編輯 .env 檔案，填入你的設定
-   vim .env
-   ```
-
-3. 運行容器：
-   ```bash
-   # 選項 1：直接使用環境變數
+   # 選項 1：直接使用環境變數（生產模式 - 每天執行一次）
    docker run -d \
      --name ptt-auto-sign \
      --restart unless-stopped \
@@ -52,13 +44,34 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
      -e TELEGRAM_CHAT_ID=你的聊天ID \
      crazycat836/pttautosign:latest
      
-   # 選項 2：使用 .env 檔案
+   # 選項 2：使用測試模式（每分鐘執行一次，共3次）
    docker run -d \
-     --name ptt-auto-sign \
+     --name ptt-auto-sign-test \
      --restart unless-stopped \
-     --env-file .env \
+     -e PTT_USERNAME=你的用戶名 \
+     -e PTT_PASSWORD=你的密碼 \
+     -e TELEGRAM_BOT_TOKEN=你的Bot令牌 \
+     -e TELEGRAM_CHAT_ID=你的聊天ID \
+     -e TEST_MODE=true \
      crazycat836/pttautosign:latest
    ```
+
+### Docker 運行模式
+
+容器支援兩種運行模式：
+
+1. **生產模式**（預設）：容器每天在上午9點到下午5點之間的隨機時間執行一次（台灣時間）。
+2. **測試模式**：容器每分鐘執行一次，共執行3次，適用於測試您的設置。
+
+在任一模式下，容器都會：
+1. **驗證憑證**：在設置 cron 任務前，先執行一次登入測試和通知，確保設置正確
+2. **設置 cron 任務**：根據所選模式設置相應的排程
+3. **保持運行**：監控並執行排程任務
+
+查看容器日誌：
+```bash
+docker logs -f ptt-auto-sign
+```
 
 ### 本地開發
 
@@ -80,28 +93,41 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 
 3. 設定環境變數：
    ```bash
-   cp .env.example .env
-   # 編輯 .env 檔案
+   # PTT 帳號設定
+   export PTT_USERNAME="你的用戶名"
+   export PTT_PASSWORD="你的密碼"
+   
+   # Telegram 設定
+   export TELEGRAM_BOT_TOKEN="你的Bot令牌"
+   export TELEGRAM_CHAT_ID="你的聊天ID"
    ```
 
 4. 執行程式：
    ```bash
-   ./run_script.sh
+   # 僅測試登入
+   python -m pttautosign.main --test-login
+   
+   # 正常執行
+   python -m pttautosign.main
    ```
 
 ## ⚙️ 環境變數設定
 
-### Telegram 設定
-| 變數名稱 | 說明 | 必填 | 範例 |
-|---------|------|------|------|
-| TELEGRAM_BOT_TOKEN | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
-| TELEGRAM_CHAT_ID | 通知訊息接收群組/頻道 ID | ✅ | -1001234567890 |
-
-### PTT 帳號設定
+### 必要設定
 | 變數名稱 | 說明 | 必填 | 範例 |
 |---------|------|------|------|
 | PTT_USERNAME | PTT 帳號用戶名 | ✅ | your_username |
 | PTT_PASSWORD | PTT 帳號密碼 | ✅ | your_password |
+| TELEGRAM_BOT_TOKEN | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
+| TELEGRAM_CHAT_ID | 通知訊息接收群組/頻道 ID | ✅ | -1001234567890 |
+
+### 選用設定
+| 變數名稱 | 說明 | 預設值 | 範例 |
+|---------|------|--------|------|
+| TEST_MODE | 啟用測試模式 | false | true |
+| DEBUG_MODE | 啟用詳細日誌 | false | true |
+| RANDOM_DAILY_TIME | 每天產生新隨機時間 | true | false |
+| DISABLE_NOTIFICATIONS | 停用 Telegram 通知 | false | true |
 
 ## 📝 日誌系統
 
@@ -109,9 +135,9 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援多帳號管�
 - INFO：一般執行資訊
 - WARNING：警告訊息
 - ERROR：錯誤訊息
-- DEBUG：除錯資訊（僅開發環境）
+- DEBUG：除錯資訊（當 DEBUG_MODE=true 時）
 
-所有日誌僅輸出到控制台，不會在本地創建日誌檔案。
+所有日誌輸出為彩色格式，並使用中文顯示，提高可讀性。系統不會在本地創建日誌檔案。
 
 ## 🛠️ 開發
 
@@ -131,16 +157,22 @@ poetry run isort .
 
 ```
 pttautosign/
-├── config.py           # 配置類別和函數
-├── main.py             # 主程式進入點
+├── __init__.py            # 套件元數據
+├── main.py                # 主程式進入點
+├── patches/
+│   └── pyptt_patch.py     # PyPtt 相容性修補
 ├── utils/
-│   ├── __init__.py
-│   ├── logger.py       # 日誌配置
-│   ├── ptt.py          # PTT 自動簽到功能
-│   └── telegram.py     # Telegram 通知功能
-├── Dockerfile          # Docker 配置
-├── pyproject.toml      # 專案元數據和依賴
-└── run_script.sh       # 本地執行腳本
+│   ├── app_context.py     # 應用程式上下文
+│   ├── config.py          # 配置類別
+│   ├── factory.py         # 服務工廠
+│   ├── interfaces.py      # 服務接口
+│   ├── logger.py          # 日誌配置
+│   ├── ptt.py             # PTT 自動簽到功能
+│   └── telegram.py        # Telegram 通知功能
+├── Dockerfile             # Docker 配置
+├── pyproject.toml         # 專案元數據和依賴
+└── scripts/
+    └── docker_runner.sh   # Docker 入口腳本
 ```
 
 ## ❗️ 故障排除

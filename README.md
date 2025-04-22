@@ -8,11 +8,11 @@
 
 English | [繁體中文](README_zh-TW.md)
 
-An automated sign-in tool for PTT (BBS) with multi-account support and Telegram notifications. Easily achieve daily automatic sign-ins through Docker containerized deployment.
+An automated sign-in tool for PTT (BBS) with Telegram notifications. Easily achieve daily automatic sign-ins through Docker containerized deployment.
 
 ## ✨ Features
 
-- 🔄 Automated sign-in for multiple PTT accounts
+- 🔄 Automated sign-in for PTT accounts
 - 📱 Telegram notifications for real-time status updates
 - 🐳 Docker containerization for easy deployment
 - 🎲 Random daily execution time (9 AM to 5 PM)
@@ -20,7 +20,7 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 - ⚙️ Flexible environment variable configuration
 - 🔒 Secure account management
 - 🐍 Python 3.11 support
-- 🧪 Comprehensive test suite with high code coverage
+- 🌏 Chinese localization for messages and notifications
 - 🏗️ Modular code architecture for maintainability
 
 ## 🚀 Quick Start
@@ -32,18 +32,9 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
    docker pull crazycat836/pttautosign:latest
    ```
 
-2. Prepare environment variables:
+2. Run container:
    ```bash
-   # Copy example file
-   cp .env.example .env
-   
-   # Edit .env file with your settings
-   vim .env
-   ```
-
-3. Run container:
-   ```bash
-   # Option 1: Using environment variables directly
+   # Option 1: Using environment variables directly (Production mode - runs once daily)
    docker run -d \
      --name ptt-auto-sign \
      --restart unless-stopped \
@@ -53,13 +44,34 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
      -e TELEGRAM_CHAT_ID=your_chat_id \
      crazycat836/pttautosign:latest
      
-   # Option 2: Using an .env file
+   # Option 2: Using Test Mode (runs every minute, 3 times total)
    docker run -d \
-     --name ptt-auto-sign \
+     --name ptt-auto-sign-test \
      --restart unless-stopped \
-     --env-file .env \
+     -e PTT_USERNAME=your_username \
+     -e PTT_PASSWORD=your_password \
+     -e TELEGRAM_BOT_TOKEN=your_bot_token \
+     -e TELEGRAM_CHAT_ID=your_chat_id \
+     -e TEST_MODE=true \
      crazycat836/pttautosign:latest
    ```
+
+### Docker Modes
+
+The container supports two operation modes:
+
+1. **Production Mode** (default): Container runs once per day at a random time between 9 AM and 5 PM (Taiwan time).
+2. **Test Mode**: Container runs every minute for 3 times, useful for testing your setup.
+
+In either mode, the container will:
+1. **Verify credentials** by performing an initial login test and notification before setting up the cron job
+2. **Set up a cron job** based on the selected mode
+3. **Keep running** to monitor and execute the scheduled tasks
+
+To view container logs:
+```bash
+docker logs -f ptt-auto-sign
+```
 
 ### Local Development
 
@@ -81,28 +93,41 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 
 3. Set up environment variables:
    ```bash
-   cp .env.example .env
-   # Edit .env file
+   # PTT credentials
+   export PTT_USERNAME="your_username"
+   export PTT_PASSWORD="your_password"
+   
+   # Telegram settings
+   export TELEGRAM_BOT_TOKEN="your_bot_token"
+   export TELEGRAM_CHAT_ID="your_chat_id"
    ```
 
-4. Run the script:
+4. Run the program:
    ```bash
-   ./run_script.sh
+   # Test login only
+   python -m pttautosign.main --test-login
+   
+   # Regular run
+   python -m pttautosign.main
    ```
 
 ## ⚙️ Environment Variables
 
-### Telegram Settings
-| Variable | Description | Required | Example |
-|----------|-------------|----------|---------|
-| TELEGRAM_BOT_TOKEN | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
-| TELEGRAM_CHAT_ID | Channel or Group ID for notifications | ✅ | -1001234567890 |
-
-### PTT Account Settings
+### Required Settings
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
 | PTT_USERNAME | PTT account username | ✅ | your_username |
 | PTT_PASSWORD | PTT account password | ✅ | your_password |
+| TELEGRAM_BOT_TOKEN | Telegram Bot Token | ✅ | 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz |
+| TELEGRAM_CHAT_ID | Channel or Group ID for notifications | ✅ | -1001234567890 |
+
+### Optional Settings
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| TEST_MODE | Enable test mode | false | true |
+| DEBUG_MODE | Enable debug logging | false | true |
+| RANDOM_DAILY_TIME | Generate new random time daily | true | false |
+| DISABLE_NOTIFICATIONS | Disable Telegram notifications | false | true |
 
 ## 📝 Logging
 
@@ -110,9 +135,9 @@ An automated sign-in tool for PTT (BBS) with multi-account support and Telegram 
 - INFO: General execution information
 - WARNING: Warning messages
 - ERROR: Error messages
-- DEBUG: Debug information (development only)
+- DEBUG: Debug information (when DEBUG_MODE=true)
 
-All logs are output to the console only. No log files are created locally.
+All logs are output to the console in colorized format. Log messages are localized in Chinese for better readability.
 
 ## 🛠️ Development
 
@@ -132,16 +157,22 @@ poetry run isort .
 
 ```
 pttautosign/
-├── config.py           # Configuration classes and functions
-├── main.py             # Main entry point
+├── __init__.py            # Package metadata
+├── main.py                # Main entry point
+├── patches/
+│   └── pyptt_patch.py     # Compatibility patches for PyPtt
 ├── utils/
-│   ├── __init__.py
-│   ├── logger.py       # Logging configuration
-│   ├── ptt.py          # PTT auto sign-in functionality
-│   └── telegram.py     # Telegram notification functionality
-├── Dockerfile          # Docker configuration
-├── pyproject.toml      # Project metadata and dependencies
-└── run_script.sh       # Script for local execution
+│   ├── app_context.py     # Application context
+│   ├── config.py          # Configuration classes
+│   ├── factory.py         # Service factory
+│   ├── interfaces.py      # Service interfaces
+│   ├── logger.py          # Logging configuration
+│   ├── ptt.py             # PTT auto sign-in functionality
+│   └── telegram.py        # Telegram notification functionality
+├── Dockerfile             # Docker configuration
+├── pyproject.toml         # Project metadata and dependencies
+└── scripts/
+    └── docker_runner.sh   # Docker entrypoint script
 ```
 
 ## ❗️ Troubleshooting
