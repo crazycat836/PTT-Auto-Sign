@@ -95,50 +95,7 @@ def parse_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description="PTT Auto Sign")
     parser.add_argument("--test-login", action="store_true", help="Test login functionality")
-    parser.add_argument("--test-notification", action="store_true", help="Test notification functionality")
-    parser.add_argument("--script", type=int, choices=[1, 2, 3, 4], help="Script number to run")
     return parser.parse_args()
-
-def test_login_and_notification(app_context):
-    """Test login and notification functionality"""
-    try:
-        # Get services
-        notification_service = app_context.get_notification_service()
-        login_service = app_context.get_login_service()
-        
-        logger.info("開始登入測試")
-        
-        # Test login
-        accounts = get_ptt_accounts()
-        results = login_service.batch_login(accounts)
-        
-        # Print results
-        success_count = sum(1 for success in results.values() if success)
-        logger.info("登入測試完成")
-        logger.debug(f"帳號總數：{len(accounts)}")
-        logger.info(f"登入成功：{success_count}")
-        logger.info(f"登入失敗：{len(accounts) - success_count}")
-        
-        if success_count < len(accounts):
-            failed_accounts = [account for account, success in results.items() if not success]
-            logger.warning(f"失敗帳號：{', '.join(failed_accounts)}")
-        
-        # Test Telegram notification if requested
-        if args.test_notification:
-            logger.debug("正在發送 Telegram 測試通知...")
-            message = f'🧪 PTT Auto Sign Test\n\n✅ Login test completed successfully\nAccounts: {len(accounts)}\nSuccessful: {success_count}'
-            result = notification_service.send_message(message)
-            
-            if result:
-                logger.debug("Telegram 通知發送成功")
-            else:
-                logger.error("Telegram 通知發送失敗")
-                
-    except Exception as e:
-        logger.error(f"測試過程發生錯誤：{str(e)}", exc_info=True)
-        return False
-    
-    return True
 
 def main():
     """Main entry point for the PTT Auto Sign program"""
@@ -147,12 +104,6 @@ def main():
         global args
         args = parse_args()
         
-        # Set logging level based on script number
-        if args.script in [1, 2, 3]:
-            root_logger.setLevel(logging.DEBUG)
-        else:
-            root_logger.setLevel(logging.INFO)
-        
         # Create and initialize application context
         app_context = AppContext()
         app_context.initialize()
@@ -160,8 +111,29 @@ def main():
         # Check if we're running in test mode
         if args.test_login:
             logger.debug("正在執行測試模式")
-            success = test_login_and_notification(app_context)
-            if not success:
+            
+            # Get login service
+            login_service = app_context.get_login_service()
+            
+            logger.info("開始登入測試")
+            
+            # Get accounts and perform batch login
+            accounts = get_ptt_accounts()
+            results = login_service.batch_login(accounts)
+            
+            # Print results
+            success_count = sum(1 for success in results.values() if success)
+            logger.info("登入測試完成")
+            logger.debug(f"帳號總數：{len(accounts)}")
+            logger.info(f"登入成功：{success_count}")
+            logger.info(f"登入失敗：{len(accounts) - success_count}")
+            
+            if success_count < len(accounts):
+                failed_accounts = [account for account, success in results.items() if not success]
+                logger.warning(f"失敗帳號：{', '.join(failed_accounts)}")
+            
+            # Exit with appropriate status code
+            if success_count == 0:
                 exit(1)
         else:
             # Run the application normally

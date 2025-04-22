@@ -25,7 +25,9 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援 Telegram 通
 
 ## 🚀 快速開始
 
-### 使用 Docker（推薦）
+### 使用 Docker（推薦的部署方式）
+
+Docker 是 PTT Auto Sign 測試和生產環境部署的首選方法。它提供了一個隔離、一致的環境，並自動處理所有依賴項。
 
 1. 拉取 Docker 映像：
    ```bash
@@ -73,7 +75,57 @@ PTT Auto Sign 是一個自動化的 PTT (BBS) 簽到工具，支援 Telegram 通
 docker logs -f ptt-auto-sign
 ```
 
+## 🐳 部署選項
+
+### Docker（推薦）
+
+Docker 是 PTT Auto Sign 的推薦部署方法，因為它：
+
+- 確保在不同系統上的一致執行環境
+- 處理所有依賴項和 Python 版本要求
+- 通過容器的 cron 系統提供內建排程功能
+- 只需重新啟動容器即可輕鬆更新
+- 通過環境變數提供簡單的參數配置
+
+#### 生產環境部署
+
+針對長期生產使用，我們建議：
+
+```bash
+docker run -d \
+  --name ptt-auto-sign \
+  --restart always \
+  -e PTT_USERNAME=你的用戶名 \
+  -e PTT_PASSWORD=你的密碼 \
+  -e TELEGRAM_BOT_TOKEN=你的Bot令牌 \
+  -e TELEGRAM_CHAT_ID=你的聊天ID \
+  crazycat836/pttautosign:latest
+```
+
+#### Docker Compose
+
+為了更輕鬆地管理，您可以使用 Docker Compose：
+
+```yaml
+# docker-compose.yml
+version: '3'
+services:
+  ptt-auto-sign:
+    image: crazycat836/pttautosign:latest
+    container_name: ptt-auto-sign
+    restart: always
+    environment:
+      - PTT_USERNAME=你的用戶名
+      - PTT_PASSWORD=你的密碼
+      - TELEGRAM_BOT_TOKEN=你的Bot令牌
+      - TELEGRAM_CHAT_ID=你的聊天ID
+```
+
+運行命令：`docker-compose up -d`
+
 ### 本地開發
+
+本地開發主要適用於貢獻者和開發人員。對於一般使用，建議使用 Docker 部署。
 
 1. 安裝 Python 3.11+ 和 Poetry：
    ```bash

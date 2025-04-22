@@ -5,23 +5,14 @@ __pycache__/
 *.so
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# 環境和配置
 .env
+*.env
 .venv
 env/
 venv/
@@ -33,9 +24,21 @@ ENV/
 *.swp
 *.swo
 
-# OS
+# 操作系統
 .DS_Store
 Thumbs.db
 
-# Local documentation
+# 專案特定
+/data/
+/tmp/
+*.log
+/var/log/
+.cache/
+execution_count
+
+# Docker
+*.tar
+.dockerignore
+
+# 文檔
 architecture_improvements.md

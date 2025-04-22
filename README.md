@@ -25,7 +25,9 @@ An automated sign-in tool for PTT (BBS) with Telegram notifications. Easily achi
 
 ## 🚀 Quick Start
 
-### Using Docker (Recommended)
+### Using Docker (Recommended Production Method)
+
+Docker is the preferred and recommended method for both testing and production deployment of PTT Auto Sign. It provides an isolated, consistent environment and handles all dependencies automatically.
 
 1. Pull the Docker image:
    ```bash
@@ -73,7 +75,57 @@ To view container logs:
 docker logs -f ptt-auto-sign
 ```
 
+## 🐳 Deployment Options
+
+### Docker (Recommended)
+
+Docker is the recommended deployment method for PTT Auto Sign, as it:
+
+- Ensures consistent execution environment across different systems
+- Handles all dependencies and Python version requirements
+- Provides built-in scheduling through the container's cron system
+- Makes updates simple with just a container restart
+- Offers easy parameter configuration through environment variables
+
+#### Production Deployment
+
+For long-term production use, we recommend:
+
+```bash
+docker run -d \
+  --name ptt-auto-sign \
+  --restart always \
+  -e PTT_USERNAME=your_username \
+  -e PTT_PASSWORD=your_password \
+  -e TELEGRAM_BOT_TOKEN=your_bot_token \
+  -e TELEGRAM_CHAT_ID=your_chat_id \
+  crazycat836/pttautosign:latest
+```
+
+#### Docker Compose
+
+For easier management, you can use Docker Compose:
+
+```yaml
+# docker-compose.yml
+version: '3'
+services:
+  ptt-auto-sign:
+    image: crazycat836/pttautosign:latest
+    container_name: ptt-auto-sign
+    restart: always
+    environment:
+      - PTT_USERNAME=your_username
+      - PTT_PASSWORD=your_password
+      - TELEGRAM_BOT_TOKEN=your_bot_token
+      - TELEGRAM_CHAT_ID=your_chat_id
+```
+
+Run with: `docker-compose up -d`
+
 ### Local Development
+
+Local development is primarily for contributors and developers. For regular usage, Docker deployment is recommended.
 
 1. Install Python 3.11+ and Poetry:
    ```bash
