@@ -17,21 +17,9 @@ python-dotenv = "^1.0.0"
 requests = "^2.31.0"
 setuptools = "^78.1.0"
 
-[tool.poetry.group.dev.dependencies]
-black = "^23.11.0"
-isort = "^5.12.0"
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 pttautosign = "pttautosign.main:main"
-
-[tool.black]
-line-length = 100
-target-version = ["py311"]
-
-[tool.isort]
-profile = "black"
-line_length = 100
