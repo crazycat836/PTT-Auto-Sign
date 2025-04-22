@@ -1,4 +1,25 @@
-# Use Python 3.11 slim image
+# 第一階段：構建環境
+FROM python:3.11-slim AS builder
+
+# 設定工作目錄
+WORKDIR /app
+
+# 安裝構建依賴
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# 複製專案檔案
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+# 安裝 Python 依賴
+RUN pip install --no-cache-dir pip setuptools wheel && \
+    pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir telnetlib3
+
+# 第二階段：執行環境
 FROM python:3.11-slim
 
 # 需要使用者提供的環境變數 (默認為空，運行時必須提供)
@@ -11,60 +32,44 @@ ENV PTT_USERNAME="" \
 ENV TZ=Asia/Taipei
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Set working directory
+# 設定工作目錄
 WORKDIR /app
 
-# Install system dependencies
+# 安裝運行時必要的系統依賴
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        curl \
-        build-essential \
         cron \
         procps \
         rsyslog \
-    && rm -rf /var/lib/apt/lists/*
-
-# 配置 cron 日誌 - 確保目錄存在
-RUN mkdir -p /etc/rsyslog.d && \
-    if [ -f /etc/rsyslog.d/50-default.conf ]; then \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /etc/rsyslog.d /app/data /var/log \
+    && if [ -f /etc/rsyslog.d/50-default.conf ]; then \
         sed -i 's/^\s*#\?\s*cron\.\*.*$/cron.* \/var\/log\/cron.log/' /etc/rsyslog.d/50-default.conf; \
     else \
         echo 'cron.* /var/log/cron.log' > /etc/rsyslog.d/cron.conf; \
     fi
 
-# 先複製所有必要檔案
-COPY pyproject.toml README.md ./
-COPY src/ ./src/
+# 從建構環境複製 Python 套件和應用程式程式碼
+COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+COPY --from=builder /app/src/ /app/src/
+
+# 複製腳本並設定執行權限
 COPY scripts/ ./scripts/
-
-# 使用pip直接安裝套件，簡化依賴安裝
-RUN pip install --no-cache-dir pip setuptools wheel && \
-    pip install --no-cache-dir -e . && \
-    pip install --no-cache-dir telnetlib3
-
-# Create necessary directories
-RUN mkdir -p /app/data /var/log
-
-# Make scripts executable
 RUN chmod +x /app/scripts/*.sh
 
-# Set environment variables for the application
+# 設定環境變數
 ENV PYTHONPATH=/app \
     CRON_DATA_DIR=/app/data \
     PYTHONDONTWRITEBYTECODE=1
 
-# 清理 __pycache__ 目錄和編譯文件
+# 清理不必要的檔案
 RUN find /app -name "__pycache__" -type d -exec rm -rf {} +  2>/dev/null || true && \
     find /app -name "*.pyc" -delete && \
     find /app -name "*.pyo" -delete && \
     find /app -name "*.pyd" -delete
 
-# Print build information
-RUN echo "Build info:" && \
-    echo "Python version:" && python --version
-
-# Expose port for health check
+# 暴露健康檢查端口
 EXPOSE 8000
 
-# Set the entrypoint
+# 設定入口點
 ENTRYPOINT ["/app/scripts/docker_runner.sh"] 
