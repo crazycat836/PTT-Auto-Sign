@@ -1,72 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Suppress warnings from PyPtt modules
-import warnings
-warnings.simplefilter('ignore', SyntaxWarning)
-warnings.simplefilter('ignore', FutureWarning)
-warnings.simplefilter('ignore', DeprecationWarning)
-
 import os
 import sys
 import logging
 import argparse
 from dotenv import load_dotenv
 
-# Custom formatter to shorten logger names
-class ShortNameFormatter(logging.Formatter):
-    def format(self, record):
-        # Shorten the logger name to just the last part or last two parts
-        parts = record.name.split('.')
-        if len(parts) > 2:
-            # For deeply nested modules, show only the last two parts
-            record.name = '.'.join(parts[-2:])
-        
-        # Define ANSI color codes for different log levels
-        COLORS = {
-            'DEBUG': '\033[36m',     # Cyan
-            'INFO': '\033[32m',      # Green
-            'WARNING': '\033[33m',   # Yellow
-            'ERROR': '\033[31m',     # Red
-            'CRITICAL': '\033[41m',  # Red background
-            'TRACE': '\033[35m',     # Magenta
-            'RESET': '\033[0m',      # Reset to default
-        }
-        
-        # Add colors based on log level
-        levelname = record.levelname
-        if levelname in COLORS:
-            # Store original levelname
-            original_levelname = record.levelname
-            # Apply color
-            record.levelname = f"{COLORS[levelname]}{levelname}{COLORS['RESET']}"
-            # Format the record
-            result = super().format(record)
-            # Restore original levelname
-            record.levelname = original_levelname
-            return result
-        else:
-            return super().format(record)
+# Load environment variables from .env file for local development
+load_dotenv()
 
-# Configure basic logging first with a consistent format
-log_format = '%(asctime)s [%(name)s] [%(levelname)s] %(message)s'
-formatter = ShortNameFormatter(log_format, datefmt='%Y-%m-%d %H:%M:%S')
-
-# Set up the handler with our formatter
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
-
-# Configure the root logger
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
-# Remove existing handlers to avoid duplicates
-for h in root_logger.handlers[:]:
-    root_logger.removeHandler(h)
-root_logger.addHandler(handler)
+# Basic logging setup (will be reconfigured by AppContext)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(name)s] %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 logger = logging.getLogger(__name__)
 
-# Create a null handler for PyPtt logger
+# Create a null handler for PyPtt logger to suppress its output
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
@@ -74,17 +27,14 @@ class NullHandler(logging.Handler):
 # Set up a null handler for PyPtt logger
 pyptt_logger = logging.getLogger('PyPtt')
 pyptt_logger.addHandler(NullHandler())
-pyptt_logger.propagate = False  # Prevent logs from propagating to the root logger
-pyptt_logger.setLevel(logging.CRITICAL)  # Set to CRITICAL to suppress most logs
+pyptt_logger.propagate = False
+pyptt_logger.setLevel(logging.CRITICAL)
 
 # Import our patches before importing any PyPtt related modules
 logger.info("PTT 自動簽到程式啟動")
 logger.debug("正在套用相容性修補...")
 from pttautosign.patches import pyptt_patch
 logger.debug("修補套用完成")
-
-# Load environment variables from .env file for local development
-load_dotenv()
 
 # Import modules after environment variables are loaded
 from pttautosign.utils.config import ConfigValidationError
@@ -101,7 +51,6 @@ def main():
     """Main entry point for the PTT Auto Sign program"""
     try:
         # Parse command line arguments
-        global args
         args = parse_args()
         
         # Create and initialize application context

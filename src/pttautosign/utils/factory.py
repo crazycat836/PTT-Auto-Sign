@@ -38,5 +38,9 @@ class ServiceFactory:
         """
         if "login" not in self._services:
             notification_service = self.get_notification_service()
-            self._services["login"] = PTTAutoSign(notification_service, self.app_config.ptt)
+            self._services["login"] = PTTAutoSign(
+                notification_service, 
+                self.app_config.ptt,
+                self.app_config.telegram.disable_notification
+            )
         return self._services["login"] 

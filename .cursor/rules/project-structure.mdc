@@ -1,0 +1,51 @@
+# PTT Auto Sign 專案結構指南
+
+## 🏗️ 核心架構
+
+主程式入口點是 [src/pttautosign/main.py](mdc:src/pttautosign/main.py)，它負責：
+- 命令列參數解析
+- 應用程式生命週期管理
+- 錯誤處理與日誌配置
+
+專案配置在 [pyproject.toml](mdc:pyproject.toml) 中定義，使用 Poetry 進行依賴管理。
+
+## 📦 模組組織
+
+### Utils 模組 (`src/pttautosign/utils/`)
+- [config.py](mdc:src/pttautosign/utils/config.py) - 環境變數配置與驗證
+- [app_context.py](mdc:src/pttautosign/utils/app_context.py) - 應用程式上下文與服務管理
+- [ptt.py](mdc:src/pttautosign/utils/ptt.py) - PTT BBS 連線與登入邏輯
+- [telegram.py](mdc:src/pttautosign/utils/telegram.py) - Telegram 通知服務
+- [logger.py](mdc:src/pttautosign/utils/logger.py) - 日誌系統配置
+- [interfaces.py](mdc:src/pttautosign/utils/interfaces.py) - 抽象介面定義
+- [factory.py](mdc:src/pttautosign/utils/factory.py) - 服務工廠模式
+
+### Patches 模組 (`src/pttautosign/patches/`)
+- [pyptt_patch.py](mdc:src/pttautosign/patches/pyptt_patch.py) - PyPtt 函式庫相容性修補
+
+## 🐳 容器化部署
+
+[Dockerfile](mdc:Dockerfile) 使用多階段構建，[scripts/docker_runner.sh](mdc:scripts/docker_runner.sh) 處理容器內的 Cron 排程與服務管理。
+
+## 📝 文檔
+
+- [README.md](mdc:README.md) - 英文文檔
+- [README_zh-TW.md](mdc:README_zh-TW.md) - 繁體中文文檔  
+- [CHANGELOG.md](mdc:CHANGELOG.md) - 版本更新記錄
+
+## 🎯 設計原則
+
+### 模組化設計
+- 每個模組負責單一職責
+- 使用抽象介面降低耦合
+- 透過依賴注入管理服務
+
+### 錯誤處理
+- 統一的異常處理機制
+- 結構化的日誌記錄
+- 用戶友好的中文錯誤訊息
+
+### 可維護性
+- 清晰的代碼結構
+- 完整的類型提示
+- 詳細的文檔字串

@@ -1,0 +1,122 @@
+# 配置管理指南
+
+## ⚙️ 環境變數配置
+
+配置管理集中在 [config.py](mdc:src/pttautosign/utils/config.py)，提供統一的環境變數驗證與解析。
+
+### 必要配置
+- `PTT_USERNAME`: PTT BBS 帳號用戶名
+- `PTT_PASSWORD`: PTT BBS 帳號密碼
+- `TELEGRAM_BOT_TOKEN`: Telegram Bot API Token
+- `TELEGRAM_CHAT_ID`: Telegram 聊天室 ID
+
+### 可選配置
+- `TEST_MODE`: 測試模式，設為 `true` 啟用每分鐘執行
+- `DEBUG_MODE`: 調試模式，設為 `true` 啟用詳細日誌
+- `RANDOM_DAILY_TIME`: 隨機執行時間，預設 `true`
+- `DISABLE_NOTIFICATIONS`: 停用 Telegram 通知，預設 `false`
+
+## 🔧 配置驗證
+
+### 驗證流程
+[config.py](mdc:src/pttautosign/utils/config.py) 中的 `ConfigValidationError` 異常用於處理配置錯誤：
+
+```python
+# 範例：環境變數驗證
+if not os.getenv('PTT_USERNAME'):
+    raise ConfigValidationError("PTT_USERNAME 環境變數未設定")
+```
+
+### 配置檢查清單
+1. **PTT 帳號驗證**：確保帳號密碼正確
+2. **Telegram 設定**：驗證 Bot Token 和 Chat ID
+3. **網路連線**：確認可以訪問 PTT 和 Telegram API
+4. **權限檢查**：確認 Bot 已加入指定的群組或頻道
+
+## 🔒 安全性考量
+
+### 敏感資訊管理
+- 敏感資訊（密碼、Token）應透過環境變數傳遞
+- 避免在代碼中硬編碼認證資訊
+- 使用 `.env` 文件進行本地開發（不應提交到版本控制）
+
+### 權限控制
+- 使用最小權限原則
+- 定期輪換 Token 和密碼
+- 監控異常登入活動
+
+## 📁 配置檔案
+
+### 本地開發
+創建 `.env` 檔案：
+```bash
+PTT_USERNAME=your_username
+PTT_PASSWORD=your_password
+TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_CHAT_ID=your_chat_id
+DEBUG_MODE=true
+TEST_MODE=true
+```
+
+### Docker 部署
+透過 `-e` 參數或 Docker Compose 的 `environment` 區段設定：
+
+```yaml
+# docker-compose.yml
+version: '3'
+services:
+  ptt-auto-sign:
+    image: crazycat836/pttautosign:latest
+    environment:
+      - PTT_USERNAME=your_username
+      - PTT_PASSWORD=your_password
+      - TELEGRAM_BOT_TOKEN=your_token
+      - TELEGRAM_CHAT_ID=your_chat_id
+    restart: unless-stopped
+```
+
+## 🔍 配置調試
+
+### 配置驗證測試
+```bash
+# 測試所有配置
+python -m pttautosign.main --test-login
+
+# 使用 Docker 測試
+docker run --rm \
+  -e PTT_USERNAME=your_username \
+  -e PTT_PASSWORD=your_password \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e TELEGRAM_CHAT_ID=your_chat_id \
+  -e TEST_MODE=true \
+  crazycat836/pttautosign:latest
+```
+
+### 常見配置問題
+
+1. **PTT 登入失敗**
+   - 檢查用戶名和密碼是否正確
+   - 確認帳號未被鎖定
+   - 驗證網路連線到 PTT 伺服器
+
+2. **Telegram 通知失敗**
+   - 確認 Bot Token 格式正確
+   - 檢查 Chat ID 是否有效
+   - 確認 Bot 已加入目標群組
+
+3. **環境變數未生效**
+   - 檢查環境變數名稱拼寫
+   - 確認環境變數值沒有多餘空格
+   - 重新啟動應用程式或容器
+
+## 📊 配置監控
+
+### 日誌監控
+- 監控配置載入日誌
+- 追蹤配置變更記錄
+- 設定配置錯誤告警
+
+### 健康檢查
+- 定期驗證 PTT 連線
+- 檢查 Telegram 通知功能
+- 監控服務運行狀態

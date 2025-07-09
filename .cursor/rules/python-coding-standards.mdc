@@ -1,0 +1,84 @@
+# Python 編碼規範
+
+## 🎯 編碼風格
+
+### 導入順序
+1. 標準庫導入
+2. 第三方庫導入  
+3. 本地模組導入
+
+範例參考 [src/pttautosign/main.py](mdc:src/pttautosign/main.py)：
+```python
+# 標準庫
+import os
+import sys
+import logging
+
+# 第三方庫
+from dotenv import load_dotenv
+
+# 本地模組
+from pttautosign.utils.config import ConfigValidationError
+```
+
+### 命名規範
+- **變數和函數**：使用 snake_case
+- **類別**：使用 PascalCase
+- **常數**：使用 UPPER_SNAKE_CASE
+- **私有成員**：使用單底線前綴 `_private_method`
+
+### 異常處理
+- 使用具體的異常類型，避免裸露的 `except:`
+- 自定義異常應繼承自適當的基類（見 [config.py](mdc:src/pttautosign/utils/config.py)）
+- 重要異常需要記錄日誌
+
+### 日誌記錄
+- 使用結構化日誌訊息
+- 中文訊息用於用戶友好的輸出
+- 英文訊息用於技術調試
+- 參考 [logger.py](mdc:src/pttautosign/utils/logger.py) 的配置
+
+### 類型提示
+- 對於公共 API 使用類型提示
+- 參考 [interfaces.py](mdc:src/pttautosign/utils/interfaces.py) 的抽象基類定義
+- 使用 `Optional` 表示可選參數
+- 使用 `Union` 表示多種可能類型
+
+### 文檔字串
+- 使用 Google 風格的 docstring
+- 公共方法必須有文檔字串
+- 包含參數、返回值和異常說明
+
+## 🔧 程式碼組織
+
+### 模組結構
+- 每個模組應有清晰的職責
+- 使用 `__init__.py` 控制模組對外介面
+- 避免循環導入
+
+### 函數設計
+- 單一職責原則
+- 函數長度不超過 50 行
+- 使用描述性的函數名稱
+- 避免過多的參數（建議不超過 5 個）
+
+### 類別設計
+- 使用抽象基類定義介面
+- 實現依賴注入模式
+- 避免深層繼承結構
+
+## 🎨 程式碼風格
+
+### 行長度
+- 每行不超過 88 字元（Black 預設）
+- 使用括號進行長行分割
+
+### 空行使用
+- 類別間使用兩個空行分隔
+- 方法間使用一個空行分隔
+- 邏輯區塊間使用空行分隔
+
+### 註解原則
+- 解釋「為什麼」而非「是什麼」
+- 使用中文註解提高可讀性
+- 保持註解與代碼同步更新

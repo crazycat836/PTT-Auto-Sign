@@ -2,7 +2,7 @@
 PTT Auto Sign - A tool for automatic PTT login with Telegram notifications.
 """
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 __author__ = "crazycat836"
 __email__ = "crazycat836@gmail.com"
 

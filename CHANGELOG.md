@@ -1,16 +1,42 @@
 # Changelog
 
+## v1.3.1
+- **Code Refactoring and Optimization**:
+  - Unified logging configuration management by removing duplicate `ShortNameFormatter` in `main.py`
+  - Centralized all logging configuration through `logger.py` with `ColorShortNameFormatter`
+  - Simplified main program initialization logic
+
+- **Configuration Management Improvements**:
+  - Added `debug_mode` support in `LogConfig` class
+  - Added `test_mode` support in `AppConfig` class  
+  - Unified environment variable naming conventions (`LOG_FORMAT`, `LOG_LEVEL`)
+  - Automatic log level setting based on `DEBUG_MODE`
+
+- **Environment Variable Handling**:
+  - Removed duplicate `DISABLE_NOTIFICATIONS` reading in `ptt.py`
+  - Unified notification disable setting through configuration system and dependency injection
+  - Centralized service creation management in `ServiceFactory`
+
+- **Warning Handling Simplification**:
+  - Removed duplicate warning suppression code in `main.py`
+  - Unified all PyPtt-related warning handling in `pyptt_patch.py`
+
+- **Code Structure Improvements**:
+  - Enhanced service dependency relationships
+  - Improved configuration validation and error handling
+  - Better separation of concerns across modules
+
 ## v1.3.0
-- 程式碼優化與清理：移除未使用的函數和變數
-- 移除 `validate_all_configs()` 函數，簡化配置驗證流程
-- 移除 `LogConfig` 中未使用的 `use_json_format` 和 `include_hostname` 參數
-- 移除 `ptt.py` 中未使用的 `daily_login` 方法別名
-- 移除 `JsonFormatter` 類別和相關功能，集中使用彩色文字格式化
-- 移除 `docker_runner.sh` 中未使用的 `log_initial_config()` 函數
-- 現代化環境變數名稱，更符合 Docker 慣例
-- 簡化PTT帳號管理，支援單一帳號設定模式
-- 改進中文語系支援，包括錯誤訊息和通知內容的本地化
-- 更新文檔與使用說明，提供更清楚的操作指引
+- **Code Optimization and Cleanup**: Removed unused functions and variables
+- Removed `validate_all_configs()` function, simplified configuration validation process
+- Removed unused `use_json_format` and `include_hostname` parameters from `LogConfig`
+- Removed unused `daily_login` method alias in `ptt.py`
+- Removed `JsonFormatter` class and related functionality, centralized to colored text formatting
+- Removed unused `log_initial_config()` function in `docker_runner.sh`
+- **Environment Variable Modernization**: Updated to follow Docker conventions
+- **PTT Account Management**: Simplified to support single account configuration mode
+- **Localization Improvements**: Enhanced Chinese language support including error messages and notification content localization
+- **Documentation Updates**: Provided clearer operational guidance and usage instructions
 
 ## v1.2.0
 - Simplified Docker configuration with cleaner environment variables

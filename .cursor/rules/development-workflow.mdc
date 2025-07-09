@@ -1,0 +1,90 @@
+# 開發工作流程
+
+## 🔧 本地開發環境
+
+### 環境設定
+1. 安裝 Python 3.11+ 和 Poetry
+2. 執行 `poetry install` 安裝依賴
+3. 設定環境變數（參考 [README.md](mdc:README.md)）
+
+### 執行與測試
+```bash
+# 測試登入功能
+python -m pttautosign.main --test-login
+
+# 正常執行
+python -m pttautosign.main
+```
+
+## 🏗️ 架構設計原則
+
+### 依賴注入
+使用 [factory.py](mdc:src/pttautosign/utils/factory.py) 進行服務創建，透過 [app_context.py](mdc:src/pttautosign/utils/app_context.py) 管理生命週期。
+
+### 介面抽象
+定義在 [interfaces.py](mdc:src/pttautosign/utils/interfaces.py)，確保模組間的低耦合。
+
+### 錯誤處理
+- 在 [config.py](mdc:src/pttautosign/utils/config.py) 中定義自定義異常
+- 統一的錯誤處理流程在 [main.py](mdc:src/pttautosign/main.py)
+
+## 🔍 調試指南
+
+### 日誌層級
+- `INFO`：一般執行資訊
+- `WARNING`：警告訊息  
+- `ERROR`：錯誤訊息
+- `DEBUG`：詳細調試資訊（需設定 `DEBUG_MODE=true`）
+
+### 常見問題
+1. **PyPtt 相容性**：參考 [pyptt_patch.py](mdc:src/pttautosign/patches/pyptt_patch.py)
+2. **環境變數配置**：檢查 [config.py](mdc:src/pttautosign/utils/config.py) 的驗證邏輯
+3. **Telegram 通知**：確認 [telegram.py](mdc:src/pttautosign/utils/telegram.py) 的設定
+
+## 🚀 開發最佳實務
+
+### 程式碼品質
+- 遵循 Python PEP 8 編碼規範
+- 使用類型提示增強代碼可讀性
+- 撰寫清晰的文檔字串
+
+### 測試策略
+- 使用 `--test-login` 驗證核心功能
+- 在 Docker 環境中測試部署
+- 確保環境變數配置正確
+
+### 版本控制
+- 使用語義化版本號
+- 撰寫清晰的提交訊息
+- 保持分支策略簡潔
+
+## 📦 發布流程
+
+### 版本管理
+1. 更新 [pyproject.toml](mdc:pyproject.toml) 版本號
+2. 更新 [CHANGELOG.md](mdc:CHANGELOG.md)
+3. 建立 Git tag
+4. 觸發 Docker 映像自動構建
+
+### Docker 映像
+映像會自動推送到 Docker Hub: `crazycat836/pttautosign`
+
+## 🔧 開發工具
+
+### 程式碼格式化
+```bash
+# 使用 Black 格式化程式碼
+poetry run black .
+
+# 使用 isort 排序 import 語句
+poetry run isort .
+```
+
+### 靜態分析
+```bash
+# 類型檢查
+poetry run mypy src/
+
+# 程式碼檢查
+poetry run flake8 src/
+```

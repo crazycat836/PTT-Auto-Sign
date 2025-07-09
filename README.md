@@ -193,9 +193,30 @@ All logs are output to the console in colorized format. Log messages are localiz
 
 ## 🛠️ Development
 
-### Code Formatting
+### Development Environment Setup
 
-The project uses Black and isort for code formatting:
+1. **Prerequisites**:
+   - Python 3.11+
+   - Poetry for dependency management
+   - Docker (optional, for containerized development)
+
+2. **Clone and Setup**:
+   ```bash
+   git clone https://github.com/crazycat836/PTTAutoSign.git
+   cd PTTAutoSign
+   poetry install
+   ```
+
+3. **Environment Configuration**:
+   ```bash
+   # Copy environment template
+   cp .env.example .env
+   # Edit .env with your credentials
+   ```
+
+### Code Quality Tools
+
+The project uses modern Python development tools:
 
 ```bash
 # Format code with Black
@@ -203,29 +224,36 @@ poetry run black .
 
 # Sort imports with isort
 poetry run isort .
+
+# Type checking with mypy
+poetry run mypy src/
+
+# Linting with flake8
+poetry run flake8 src/
 ```
 
-## 🏗️ Project Structure
+### Development Workflow
 
-```
-pttautosign/
-├── __init__.py            # Package metadata
-├── main.py                # Main entry point
-├── patches/
-│   └── pyptt_patch.py     # Compatibility patches for PyPtt
-├── utils/
-│   ├── app_context.py     # Application context
-│   ├── config.py          # Configuration classes
-│   ├── factory.py         # Service factory
-│   ├── interfaces.py      # Service interfaces
-│   ├── logger.py          # Logging configuration
-│   ├── ptt.py             # PTT auto sign-in functionality
-│   └── telegram.py        # Telegram notification functionality
-├── Dockerfile             # Docker configuration
-├── pyproject.toml         # Project metadata and dependencies
-└── scripts/
-    └── docker_runner.sh   # Docker entrypoint script
-```
+1. **Feature Development**:
+   - Create feature branch from `main`
+   - Follow Python coding standards and best practices
+   - Test changes locally with `--test-login`
+
+2. **Testing**:
+   ```bash
+   # Test login functionality
+   python -m pttautosign.main --test-login
+   
+   # Test with Docker
+   docker build -t pttautosign-dev .
+   docker run --rm -e TEST_MODE=true pttautosign-dev
+   ```
+
+3. **Code Review**:
+   - All changes require review
+   - Automated checks run on PR creation
+   - Follow the project's architectural principles
+
 
 ## ❗️ Troubleshooting
 
@@ -259,3 +287,20 @@ We welcome all contributions! Here's how you can help:
 ## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 📊 Project Statistics
+
+- **Current Version**: 1.3.1
+- **Python Version**: 3.11+
+- **Dependencies**: Managed with Poetry
+- **Docker Image**: `crazycat836/pttautosign:latest`
+- **Architecture**: Modular, dependency-injected design
+- **Testing**: Comprehensive test coverage with `--test-login`
+- **Documentation**: Bilingual (English/Traditional Chinese)
+
+## 🔗 Related Links
+
+- [Docker Hub Repository](https://hub.docker.com/r/crazycat836/pttautosign)
+- [GitHub Issues](https://github.com/crazycat836/PTTAutoSign/issues)
+- [Release Notes](https://github.com/crazycat836/PTTAutoSign/releases)
+- [Change Log](CHANGELOG.md)

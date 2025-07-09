@@ -182,6 +182,7 @@ class LogConfig:
     """Logging configuration"""
     log_format: str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
     log_level: int = logging.INFO
+    debug_mode: bool = False
     
     def validate(self) -> None:
         """Validate configuration
@@ -199,14 +200,22 @@ class LogConfig:
         Returns:
             LogConfig: Logging configuration
         """
-        log_format = os.getenv("log_format", '%(asctime)s [%(name)s] %(levelname)s: %(message)s')
+        log_format = os.getenv("LOG_FORMAT", '%(asctime)s [%(name)s] %(levelname)s: %(message)s')
         
-        log_level_str = os.getenv("log_level", "INFO").upper()
-        log_level = getattr(logging, log_level_str, logging.INFO)
+        # Handle DEBUG_MODE
+        debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+        
+        # Set log level based on DEBUG_MODE
+        if debug_mode:
+            log_level = logging.DEBUG
+        else:
+            log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+            log_level = getattr(logging, log_level_str, logging.INFO)
         
         config = cls(
             log_format=log_format,
-            log_level=log_level
+            log_level=log_level,
+            debug_mode=debug_mode
         )
         
         return config
@@ -236,6 +245,7 @@ class AppConfig:
     telegram: TelegramConfig
     ptt: PTTConfig
     log: LogConfig
+    test_mode: bool = False
     
     @classmethod
     def from_env(cls) -> 'AppConfig':
@@ -244,10 +254,13 @@ class AppConfig:
         Returns:
             AppConfig: Application configuration
         """
+        test_mode = os.getenv("TEST_MODE", "false").lower() == "true"
+        
         return cls(
             telegram=TelegramConfig.from_env(),
             ptt=PTTConfig.from_env(),
-            log=LogConfig.from_env()
+            log=LogConfig.from_env(),
+            test_mode=test_mode
         )
     
     def to_dict(self) -> Dict[str, Any]:
@@ -259,7 +272,8 @@ class AppConfig:
         return {
             "telegram": self.telegram.to_dict(),
             "ptt": self.ptt.to_dict(),
-            "log": self.log.to_dict()
+            "log": self.log.to_dict(),
+            "test_mode": self.test_mode
         }
     
     def to_json(self) -> str:

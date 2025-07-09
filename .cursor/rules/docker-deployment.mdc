@@ -1,0 +1,114 @@
+# Docker 部署指南
+
+## 🐳 容器化架構
+
+### 多階段構建
+[Dockerfile](mdc:Dockerfile) 使用多階段構建模式：
+- **Builder 階段**：安裝依賴與編譯
+- **Runtime 階段**：精簡的運行環境
+
+### 容器入口點
+[scripts/docker_runner.sh](mdc:scripts/docker_runner.sh) 負責：
+- 環境變數驗證
+- Cron 排程設定
+- 服務健康檢查
+- 日誌管理
+
+## ⚙️ 環境變數配置
+
+### 必要環境變數
+- `PTT_USERNAME` - PTT 帳號
+- `PTT_PASSWORD` - PTT 密碼  
+- `TELEGRAM_BOT_TOKEN` - Telegram Bot Token
+- `TELEGRAM_CHAT_ID` - Telegram Chat ID
+
+### 可選環境變數
+- `TEST_MODE` - 測試模式（每分鐘執行）
+- `DEBUG_MODE` - 調試模式
+- `RANDOM_DAILY_TIME` - 隨機執行時間
+- `DISABLE_NOTIFICATIONS` - 停用通知
+
+## 🚀 部署模式
+
+### 生產模式（預設）
+- 每日在 9:00-17:00 間隨機時間執行
+- 適合長期運行的自動化簽到
+
+### 測試模式
+- 每分鐘執行一次，共執行 3 次
+- 適合驗證配置和功能測試
+
+## 🔧 容器管理
+
+### 基本操作
+```bash
+# 啟動容器
+docker run -d --name ptt-auto-sign \
+  -e PTT_USERNAME=your_username \
+  -e PTT_PASSWORD=your_password \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e TELEGRAM_CHAT_ID=your_chat_id \
+  crazycat836/pttautosign:latest
+
+# 查看日誌
+docker logs -f ptt-auto-sign
+
+# 重啟容器
+docker restart ptt-auto-sign
+
+# 停止容器
+docker stop ptt-auto-sign
+```
+
+### 健康檢查
+容器暴露 8000 端口用於健康檢查，確保服務正常運行。
+
+## 📊 監控與維護
+
+### 日誌管理
+- 所有日誌輸出到 stdout/stderr
+- 使用 `docker logs` 查看執行狀態
+- 支援日誌輪轉和過濾
+
+### 故障排除
+1. **容器無法啟動**：檢查環境變數配置
+2. **簽到失敗**：查看日誌中的錯誤訊息
+3. **通知未收到**：驗證 Telegram 設定
+
+### 更新策略
+```bash
+# 拉取最新映像
+docker pull crazycat836/pttautosign:latest
+
+# 停止舊容器
+docker stop ptt-auto-sign
+
+# 移除舊容器
+docker rm ptt-auto-sign
+
+# 啟動新容器
+docker run -d --name ptt-auto-sign \
+  --restart unless-stopped \
+  -e PTT_USERNAME=your_username \
+  -e PTT_PASSWORD=your_password \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e TELEGRAM_CHAT_ID=your_chat_id \
+  crazycat836/pttautosign:latest
+```
+
+## 🔒 安全性考量
+
+### 環境變數安全
+- 使用 Docker secrets 管理敏感資訊
+- 避免在 Dockerfile 中硬編碼密碼
+- 定期更新 Token 和密碼
+
+### 網路安全
+- 容器不需要對外暴露端口
+- 使用內部網路進行通信
+- 限制容器的網路訪問權限
+
+### 映像安全
+- 使用官方基礎映像
+- 定期更新基礎映像
+- 掃描映像漏洞

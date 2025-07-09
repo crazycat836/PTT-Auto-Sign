@@ -10,17 +10,17 @@ from PyPtt import exceptions as PTT_exceptions
 from pttautosign.utils.config import PTTConfig
 from pttautosign.utils.telegram import TelegramBot
 from pttautosign.utils.interfaces import LoginService, NotificationService
-import os
 
 class PTTAutoSign(LoginService):
     """PTT auto sign-in handler class"""
     
-    def __init__(self, telegram_bot: NotificationService, config: Optional[PTTConfig] = None):
+    def __init__(self, telegram_bot: NotificationService, config: Optional[PTTConfig] = None, disable_notifications: bool = False):
         """Initialize the PTT auto sign-in handler
         
         Args:
             telegram_bot: Notification service for sending notifications
             config: Optional PTT configuration. If None, default config will be used.
+            disable_notifications: Whether to disable notifications
         """
         self.ptt = PTT.API(log_level=PTT.log.SILENT)
         self.telegram = telegram_bot
@@ -29,6 +29,7 @@ class PTTAutoSign(LoginService):
         self.logger = logging.getLogger(__name__)
         self.retry_count = 0
         self.max_retries = 3
+        self.disable_notifications = disable_notifications
 
     def _format_success_message(self, ptt_id: str, user_info: Dict[str, Any]) -> str:
         """Format successful login message
@@ -89,10 +90,6 @@ class PTTAutoSign(LoginService):
         Returns:
             bool: Whether login was successful
         """
-        # 檢查環境變數是否禁用通知
-        disable_notifications = os.getenv("DISABLE_NOTIFICATIONS", "").lower() in ["true", "1", "yes"]
-        if disable_notifications:
-            send_notification = False
         
         # Log message is now in batch_login, so we don't need to log it here
         exceptions_to_catch = tuple(self.config.error_messages.keys())
@@ -102,7 +99,7 @@ class PTTAutoSign(LoginService):
             user_info = self.ptt.get_user(ptt_id)
             success_message = self._format_success_message(ptt_id, user_info)
             
-            if send_notification:
+            if send_notification and not self.disable_notifications:
                 self.telegram.send_message(success_message)
                 
             self.retry_count = 0  # Reset retry count on success
@@ -121,7 +118,7 @@ class PTTAutoSign(LoginService):
                 time.sleep(2 ** self.retry_count)
                 return self.login(ptt_id, ptt_passwd, send_notification)
             
-            if send_notification:
+            if send_notification and not self.disable_notifications:
                 self.telegram.send_message(error_message)
                 
             return False
@@ -129,7 +126,7 @@ class PTTAutoSign(LoginService):
         except Exception as e:
             self.logger.error(f"帳號 {ptt_id} 登入時發生未預期的錯誤：{str(e)}", exc_info=True)
             
-            if send_notification:
+            if send_notification and not self.disable_notifications:
                 self.telegram.send_message(f"❌ 發生未預期的錯誤: {str(e)}")
                 
             return False
