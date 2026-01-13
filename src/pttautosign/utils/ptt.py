@@ -22,7 +22,7 @@ class PTTAutoSign(LoginService):
             config: Optional PTT configuration. If None, default config will be used.
             disable_notifications: Whether to disable notifications
         """
-        self.ptt = PTT.API(log_level=PTT.log.SILENT)
+        # self.ptt is created per login request to support concurrency
         self.telegram = telegram_bot
         self.config = config or PTTConfig()
         self.tz = timezone(timedelta(hours=self.config.timezone_hours))
@@ -93,10 +93,14 @@ class PTTAutoSign(LoginService):
         
         # Log message is now in batch_login, so we don't need to log it here
         exceptions_to_catch = tuple(self.config.error_messages.keys())
+        ptt_bot = None
         
         try:
-            self.ptt.login(ptt_id, ptt_passwd, kick_other_session=True)
-            user_info = self.ptt.get_user(ptt_id)
+            # Create a new PTT instance for this thread
+            ptt_bot = PTT.API(log_level=PTT.log.SILENT)
+            
+            ptt_bot.login(ptt_id, ptt_passwd, kick_other_session=True)
+            user_info = ptt_bot.get_user(ptt_id)
             success_message = self._format_success_message(ptt_id, user_info)
             
             if send_notification and not self.disable_notifications:
@@ -116,6 +120,15 @@ class PTTAutoSign(LoginService):
                 # Wait before retrying (exponential backoff)
                 import time
                 time.sleep(2 ** self.retry_count)
+                # Close the current bot before recursion
+                if ptt_bot:
+                    try:
+                        if hasattr(ptt_bot, 'is_login') and callable(ptt_bot.is_login) and ptt_bot.is_login():
+                            ptt_bot.logout()
+                        else:
+                            ptt_bot.logout()
+                    except Exception:
+                        pass
                 return self.login(ptt_id, ptt_passwd, send_notification)
             
             if send_notification and not self.disable_notifications:
@@ -132,23 +145,24 @@ class PTTAutoSign(LoginService):
             return False
             
         finally:
-            try:
-                # Check if the ptt object has the is_login method
-                if hasattr(self.ptt, 'is_login') and callable(self.ptt.is_login) and self.ptt.is_login():
-                    self.ptt.logout()
-                    self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
-                else:
-                    # Attempt to logout directly if is_login method is not available
-                    try:
-                        self.ptt.logout()
+            if ptt_bot:
+                try:
+                    # Check if the ptt object has the is_login method
+                    if hasattr(ptt_bot, 'is_login') and callable(ptt_bot.is_login) and ptt_bot.is_login():
+                        ptt_bot.logout()
                         self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
-                    except Exception:
-                        pass
-            except Exception as e:
-                self.logger.warning(f"帳號 {ptt_id} 登出時發生錯誤：{str(e)}")
+                    else:
+                        # Attempt to logout directly if is_login method is not available
+                        try:
+                            ptt_bot.logout()
+                            self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
+                        except Exception:
+                            pass
+                except Exception as e:
+                    self.logger.warning(f"帳號 {ptt_id} 登出時發生錯誤：{str(e)}")
     
     def batch_login(self, accounts: List[Tuple[str, str]]) -> Dict[str, bool]:
-        """Batch login to PTT accounts.
+        """Batch login to PTT accounts using concurrent threads.
         
         Args:
             accounts: List of (username, password) tuples
@@ -156,6 +170,8 @@ class PTTAutoSign(LoginService):
         Returns:
             Dict[str, bool]: Dictionary of login results (username -> success)
         """
+        import concurrent.futures
+        
         results = {}
         
         if not accounts:
@@ -164,20 +180,29 @@ class PTTAutoSign(LoginService):
         
         self.logger.info(f"開始批次登入 {len(accounts)} 個帳號")
         
-        for username, password in accounts:
-            try:
-                self.logger.debug(f"正在嘗試登入 PTT 帳號：{username}")
-                success = self.login(username, password)
-                results[username] = success
-                
-                if success:
-                    self.logger.debug(f"PTT 帳號 {username} 登入成功")
-                else:
-                    self.logger.error(f"PTT 帳號 {username} 登入失敗")
+        # Use ThreadPoolExecutor for concurrent logins
+        # This prevents one account's retry delay from blocking others
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(accounts), 5)) as executor:
+            future_to_account = {
+                executor.submit(self.login, username, password): username 
+                for username, password in accounts
+            }
+            
+            for future in concurrent.futures.as_completed(future_to_account):
+                username = future_to_account[future]
+                try:
+                    self.logger.debug(f"正在嘗試登入 PTT 帳號：{username}")
+                    success = future.result()
+                    results[username] = success
                     
-            except Exception as e:
-                self.logger.error(f"PTT 帳號 {username} 登入時發生錯誤：{str(e)}")
-                results[username] = False
+                    if success:
+                        self.logger.debug(f"PTT 帳號 {username} 登入成功")
+                    else:
+                        self.logger.error(f"PTT 帳號 {username} 登入失敗")
+                        
+                except Exception as e:
+                    self.logger.error(f"PTT 帳號 {username} 登入時發生錯誤：{str(e)}")
+                    results[username] = False
         
         # Log summary
         success_count = sum(1 for success in results.values() if success)

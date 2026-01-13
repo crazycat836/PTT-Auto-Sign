@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.2
+- **Python 3.14 Support**: Full support for Python 3.14 environment.
+- **Concurrency Improvements**: 
+  - Implemented `ThreadPoolExecutor` for parallel batch logins.
+  - Fixed `PyPtt` thread-safety issues by ensuring isolated API instances per thread.
+- **Code Refactoring**: 
+  - Refactored `pyptt_patch.py` into a structured class for better maintainability.
+  - Improved error handling in patch application.
+- **Documentation**: 
+  - Added `.env.example` file for easier configuration.
+
 ## v1.3.1
 - **Code Refactoring and Optimization**:
   - Unified logging configuration management by removing duplicate `ShortNameFormatter` in `main.py`

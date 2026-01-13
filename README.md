@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/issues)
 [![Release](https://img.shields.io/github/v/release/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.11-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.14-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker Pulls](https://img.shields.io/docker/pulls/crazycat836/pttautosign?style=for-the-badge&color=5D6D7E)](https://hub.docker.com/r/crazycat836/pttautosign)
 
 English | [繁體中文](README_zh-TW.md)
@@ -130,7 +130,7 @@ Local development is primarily for contributors and developers. For regular usag
 1. Install Python 3.11+ and Poetry:
    ```bash
    # macOS
-   brew install python@3.11 poetry
+   brew install python@3.14 poetry
    
    # Ubuntu/Debian
    sudo apt update
@@ -290,8 +290,8 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 📊 Project Statistics
 
-- **Current Version**: 1.3.1
-- **Python Version**: 3.11+
+- **Current Version**: 1.3.2
+- **Python Version**: 3.14+
 - **Dependencies**: Managed with Poetry
 - **Docker Image**: `crazycat836/pttautosign:latest`
 - **Architecture**: Modular, dependency-injected design
