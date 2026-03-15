@@ -6,13 +6,9 @@ import os
 import re
 import json
 import logging
-from typing import Union, Dict, Type, List, Tuple, Optional, Any
+from typing import Union, Dict, Type, List, Tuple, Any
 from dataclasses import dataclass, field, asdict
-from dotenv import load_dotenv
 from PyPtt import exceptions as PTT_exceptions
-
-# Load environment variables
-load_dotenv()
 
 class ConfigValidationError(Exception):
     """Exception raised for configuration validation errors"""

@@ -2,32 +2,31 @@
 PTT auto sign-in module for handling PTT login operations.
 """
 
+import time
 import logging
+import concurrent.futures
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List
 from PyPtt import PTT
 from PyPtt import exceptions as PTT_exceptions
 from pttautosign.utils.config import PTTConfig
-from pttautosign.utils.telegram import TelegramBot
 from pttautosign.utils.interfaces import LoginService, NotificationService
 
 class PTTAutoSign(LoginService):
     """PTT auto sign-in handler class"""
-    
-    def __init__(self, telegram_bot: NotificationService, config: Optional[PTTConfig] = None, disable_notifications: bool = False):
+
+    def __init__(self, telegram_bot: NotificationService, config: PTTConfig | None = None, disable_notifications: bool = False):
         """Initialize the PTT auto sign-in handler
-        
+
         Args:
             telegram_bot: Notification service for sending notifications
             config: Optional PTT configuration. If None, default config will be used.
             disable_notifications: Whether to disable notifications
         """
-        # self.ptt is created per login request to support concurrency
         self.telegram = telegram_bot
         self.config = config or PTTConfig()
         self.tz = timezone(timedelta(hours=self.config.timezone_hours))
         self.logger = logging.getLogger(__name__)
-        self.retry_count = 0
         self.max_retries = 3
         self.disable_notifications = disable_notifications
 
@@ -79,99 +78,78 @@ class PTTAutoSign(LoginService):
         
         return f"❌ {error_message}"
 
+    def _safe_logout(self, ptt_bot, ptt_id: str) -> None:
+        """Safely logout a PTT bot instance."""
+        try:
+            ptt_bot.logout()
+            self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
+        except Exception as e:
+            self.logger.warning(f"帳號 {ptt_id} 登出時發生錯誤：{e}")
+
     def login(self, ptt_id: str, ptt_passwd: str, send_notification: bool = True) -> bool:
-        """Perform login
-        
+        """Perform login with retries.
+
         Args:
             ptt_id: PTT username
             ptt_passwd: PTT password
             send_notification: Whether to send notification on success/failure
-            
+
         Returns:
             bool: Whether login was successful
         """
-        
-        # Log message is now in batch_login, so we don't need to log it here
         exceptions_to_catch = tuple(self.config.error_messages.keys())
-        ptt_bot = None
-        
-        try:
-            # Create a new PTT instance for this thread
-            ptt_bot = PTT.API(log_level=PTT.log.SILENT)
-            
-            ptt_bot.login(ptt_id, ptt_passwd, kick_other_session=True)
-            user_info = ptt_bot.get_user(ptt_id)
-            success_message = self._format_success_message(ptt_id, user_info)
-            
-            if send_notification and not self.disable_notifications:
-                self.telegram.send_message(success_message)
-                
-            self.retry_count = 0  # Reset retry count on success
-            return True
-            
-        except exceptions_to_catch as e:
-            error_message = self._format_error_message(ptt_id, e)
-            self.logger.error(f"帳號 {ptt_id} 登入失敗：{error_message}", exc_info=True)
-            
-            # Handle retries for temporary errors
-            if isinstance(e, (PTT_exceptions.LoginTooOften, PTT_exceptions.UseTooManyResources)) and self.retry_count < self.max_retries:
-                self.retry_count += 1
-                self.logger.debug(f"正在重試帳號 {ptt_id} 的登入（第 {self.retry_count}/{self.max_retries} 次嘗試）")
-                # Wait before retrying (exponential backoff)
-                import time
-                time.sleep(2 ** self.retry_count)
-                # Close the current bot before recursion
+
+        for attempt in range(self.max_retries + 1):
+            ptt_bot = None
+            try:
+                ptt_bot = PTT.API(log_level=PTT.log.SILENT)
+                ptt_bot.login(ptt_id, ptt_passwd, kick_other_session=True)
+                user_info = ptt_bot.get_user(ptt_id)
+                success_message = self._format_success_message(ptt_id, user_info)
+
+                if send_notification and not self.disable_notifications:
+                    self.telegram.send_message(success_message)
+
+                return True
+
+            except exceptions_to_catch as e:
+                error_message = self._format_error_message(ptt_id, e)
+                self.logger.error(f"帳號 {ptt_id} 登入失敗：{error_message}", exc_info=True)
+
+                # Retry for temporary errors
+                if isinstance(e, (PTT_exceptions.LoginTooOften, PTT_exceptions.UseTooManyResources)) and attempt < self.max_retries:
+                    self.logger.debug(f"正在重試帳號 {ptt_id} 的登入（第 {attempt + 1}/{self.max_retries} 次嘗試）")
+                    time.sleep(2 ** (attempt + 1))
+                    continue
+
+                if send_notification and not self.disable_notifications:
+                    self.telegram.send_message(error_message)
+
+                return False
+
+            except Exception as e:
+                self.logger.error(f"帳號 {ptt_id} 登入時發生未預期的錯誤：{e}", exc_info=True)
+
+                if send_notification and not self.disable_notifications:
+                    self.telegram.send_message(f"❌ 發生未預期的錯誤: {e}")
+
+                return False
+
+            finally:
                 if ptt_bot:
-                    try:
-                        if hasattr(ptt_bot, 'is_login') and callable(ptt_bot.is_login) and ptt_bot.is_login():
-                            ptt_bot.logout()
-                        else:
-                            ptt_bot.logout()
-                    except Exception:
-                        pass
-                return self.login(ptt_id, ptt_passwd, send_notification)
-            
-            if send_notification and not self.disable_notifications:
-                self.telegram.send_message(error_message)
-                
-            return False
-            
-        except Exception as e:
-            self.logger.error(f"帳號 {ptt_id} 登入時發生未預期的錯誤：{str(e)}", exc_info=True)
-            
-            if send_notification and not self.disable_notifications:
-                self.telegram.send_message(f"❌ 發生未預期的錯誤: {str(e)}")
-                
-            return False
-            
-        finally:
-            if ptt_bot:
-                try:
-                    # Check if the ptt object has the is_login method
-                    if hasattr(ptt_bot, 'is_login') and callable(ptt_bot.is_login) and ptt_bot.is_login():
-                        ptt_bot.logout()
-                        self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
-                    else:
-                        # Attempt to logout directly if is_login method is not available
-                        try:
-                            ptt_bot.logout()
-                            self.logger.debug(f"已登出 PTT 帳號：{ptt_id}")
-                        except Exception:
-                            pass
-                except Exception as e:
-                    self.logger.warning(f"帳號 {ptt_id} 登出時發生錯誤：{str(e)}")
+                    self._safe_logout(ptt_bot, ptt_id)
+
+        return False
     
     def batch_login(self, accounts: List[Tuple[str, str]]) -> Dict[str, bool]:
         """Batch login to PTT accounts using concurrent threads.
-        
+
         Args:
             accounts: List of (username, password) tuples
-            
+
         Returns:
             Dict[str, bool]: Dictionary of login results (username -> success)
         """
-        import concurrent.futures
-        
         results = {}
         
         if not accounts:

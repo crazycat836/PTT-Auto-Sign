@@ -2,7 +2,7 @@
 Factory module for creating service instances.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pttautosign.utils.config import AppConfig, TelegramConfig, PTTConfig
 from pttautosign.utils.interfaces import NotificationService, LoginService
 from pttautosign.utils.telegram import TelegramBot

@@ -19,14 +19,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Create a null handler for PyPtt logger to suppress its output
-class NullHandler(logging.Handler):
-    def emit(self, record):
-        pass
-
-# Set up a null handler for PyPtt logger
+# Set up a null handler for PyPtt logger to suppress its output
 pyptt_logger = logging.getLogger('PyPtt')
-pyptt_logger.addHandler(NullHandler())
+pyptt_logger.addHandler(logging.NullHandler())
 pyptt_logger.propagate = False
 pyptt_logger.setLevel(logging.CRITICAL)
 

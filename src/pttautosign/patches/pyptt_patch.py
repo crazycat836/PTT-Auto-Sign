@@ -9,16 +9,14 @@ import importlib.util
 import re
 import warnings
 import os
-from typing import Any, Pattern, Optional, Dict
 
 logger = logging.getLogger(__name__)
 
 class PyPttPatcher:
     """Class to handle all PyPtt compatibility patches."""
-    
+
     def __init__(self):
         self._original_compile = re.compile
-        self._patched_modules = []
     
     def apply_all(self) -> bool:
         """Apply all patches."""
@@ -60,33 +58,27 @@ class PyPttPatcher:
 
     def _fix_pattern(self, pattern_str: str) -> str:
         """Fix invalid escape sequences in regex patterns."""
-        if not isinstance(pattern_str, str):
+        if not isinstance(pattern_str, str) or '\\' not in pattern_str:
             return pattern_str
-            
-        # Common escape sequences that need double escaping in strings but are valid in regex
-        # map: escape_sequence -> replacement (escaped version)
+
         escape_sequences = {
             '\\d': '\\\\d', '\\w': '\\\\w', '\\s': '\\\\s', '\\S': '\\\\S',
             '\\[': '\\\\[', '\\]': '\\\\]', '\\(': '\\\\(', '\\)': '\\\\)',
             '\\{': '\\\\{', '\\}': '\\\\}', '\\+': '\\\\+', '\\-': '\\\\-',
             '\\|': '\\\\|', '\\.': '\\\\.'
         }
-        
+
         for seq, replacement in escape_sequences.items():
-            # Check if seq is in pattern and NOT preceded by a backslash (already escaped)
-            # This is a naive check but works for most PyPtt cases
-            if seq in pattern_str and not ('\\\\' + seq[1]) in pattern_str:
+            if seq in pattern_str and ('\\\\' + seq[1]) not in pattern_str:
                 pattern_str = pattern_str.replace(seq, replacement[1:])
-        
+
         return pattern_str
 
     def _patched_compile(self, pattern, flags=0):
         """Patched version of re.compile."""
-        # Get the caller's module name to only apply patch to PyPtt
+        # Use sys._getframe instead of inspect for better performance on this hot path
         try:
-            import inspect
-            frame = inspect.currentframe().f_back
-            module_name = frame.f_globals.get('__name__', '')
+            module_name = sys._getframe(1).f_globals.get('__name__', '')
         except Exception:
             module_name = ''
         

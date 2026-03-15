@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.3
+- **Thread Safety Fix**: Fixed `retry_count` race condition in concurrent batch logins by replacing shared instance state with local iterative loop.
+- **Performance Optimization**: Replaced `inspect.currentframe()` with `sys._getframe()` in `_patched_compile` hot path, added early-exit guard in `_fix_pattern`.
+- **Code Cleanup**:
+  - Replaced custom `NullHandler` with stdlib `logging.NullHandler()`.
+  - Extracted `_safe_logout()` helper to eliminate duplicated logout logic.
+  - Removed redundant `load_dotenv()` call in `config.py`.
+  - Removed unused imports across modules (`Optional`, `Dict`, `Pattern`, `TelegramBot`).
+  - Removed unused `_patched_modules` field.
+  - Moved inline imports (`time`, `concurrent.futures`) to module level.
+
 ## v1.3.2
 - **Python 3.14 Support**: Full support for Python 3.14 environment.
 - **Concurrency Improvements**: 
