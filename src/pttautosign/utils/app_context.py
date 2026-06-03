@@ -16,28 +16,31 @@ class AppContext:
         """Initialize the application context."""
         self.app_config: Optional[AppConfig] = None
         self.service_factory: Optional[ServiceFactory] = None
+        self._accounts: Optional[List[Tuple[str, str]]] = None
         self.logger = logging.getLogger(__name__)
-    
+
     def initialize(self) -> None:
         """Initialize the application context.
-        
+
         Raises:
             ConfigValidationError: If configuration is invalid
         """
         # Load configuration first
         self._load_configuration()
-        
+
         # Setup logging with configuration
         self.logger = setup_logging(self.app_config.log)
-        
-        # Log initialization
+
+        # Cache accounts once; raises ConfigValidationError if missing.
+        self._accounts = get_ptt_accounts()
+
         self.logger.debug("應用程式上下文已建立")
         self.logger.debug("正在初始化應用程式上下文")
-        self.logger.debug(f"已載入設定：{len(get_ptt_accounts())} 個 PTT 帳號")
-        
+        self.logger.debug(f"已載入設定：{len(self._accounts)} 個 PTT 帳號")
+
         # Initialize services
         self._initialize_services()
-        
+
         self.logger.debug("應用程式上下文初始化完成")
     
     def _load_configuration(self) -> None:
@@ -50,6 +53,20 @@ class AppContext:
         # Initialize service factory
         self.service_factory = ServiceFactory(self.app_config)
     
+    def get_accounts(self) -> List[Tuple[str, str]]:
+        """Get the configured PTT accounts.
+
+        Returns the list cached during ``initialize()`` to avoid re-reading
+        environment variables (and re-raising ``ConfigValidationError``). Falls
+        back to a fresh read if accessed before initialization.
+
+        Returns:
+            List[Tuple[str, str]]: List of (username, password) tuples
+        """
+        if self._accounts is None:
+            self._accounts = get_ptt_accounts()
+        return self._accounts
+
     def get_notification_service(self) -> NotificationService:
         """Get notification service instance.
         
@@ -86,8 +103,9 @@ class AppContext:
             notification_service = self.get_notification_service()
             login_service = self.get_login_service()
             
-            # Get account list and perform batch login
-            accounts = get_ptt_accounts()
+            # Use the cached account list from initialize() to avoid
+            # re-reading env vars (and a second failure surface) per run.
+            accounts = self.get_accounts()
             self.logger.debug(f"正在處理 {len(accounts)} 個 PTT 帳號")
             
             results = login_service.batch_login(accounts)

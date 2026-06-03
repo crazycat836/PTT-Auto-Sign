@@ -8,7 +8,11 @@ import json
 import logging
 from typing import Union, Dict, Type, List, Tuple, Any
 from dataclasses import dataclass, field, asdict
-from PyPtt import exceptions as PTT_exceptions
+
+# NOTE: ``PyPtt`` is intentionally NOT imported at module top. It is imported
+# lazily inside ``PTTConfig.__post_init__`` so that this module (config
+# dataclasses, validation, secret redaction) can be imported and unit-tested
+# without PyPtt installed and without its import-time side effects.
 
 class ConfigValidationError(Exception):
     """Exception raised for configuration validation errors"""
@@ -57,9 +61,19 @@ class TelegramConfig:
         token = os.getenv("TELEGRAM_BOT_TOKEN")
         chat_id = os.getenv("TELEGRAM_CHAT_ID")
         disable_notification = os.getenv("DISABLE_NOTIFICATIONS", "false").lower() == "true"
-        retry_count = int(os.getenv("TELEGRAM_RETRY_COUNT", "3"))
-        timeout = int(os.getenv("TELEGRAM_TIMEOUT", "10"))
-        
+        try:
+            retry_count = int(os.getenv("TELEGRAM_RETRY_COUNT", "3"))
+        except ValueError as e:
+            raise ConfigValidationError(
+                "TELEGRAM_RETRY_COUNT must be an integer"
+            ) from e
+        try:
+            timeout = int(os.getenv("TELEGRAM_TIMEOUT", "10"))
+        except ValueError as e:
+            raise ConfigValidationError(
+                "TELEGRAM_TIMEOUT must be an integer"
+            ) from e
+
         if not token or not chat_id:
             raise ConfigValidationError("Telegram bot token or chat id not set in environment variables")
         
@@ -75,16 +89,25 @@ class TelegramConfig:
         return config
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert configuration to dictionary
-        
+        """Convert configuration to dictionary, masking the bot token.
+
         Returns:
-            Dict[str, Any]: Configuration as dictionary
+            Dict[str, Any]: Configuration as dictionary with token redacted.
         """
-        return asdict(self)
-    
+        result = asdict(self)
+        token = result.get("token") or ""
+        # Telegram tokens are formatted as ``<bot_id>:<secret>``; keep the bot
+        # id for traceability and mask the secret portion.
+        if ":" in token:
+            bot_id, _, _ = token.partition(":")
+            result["token"] = f"{bot_id}:***"
+        elif token:
+            result["token"] = "***"
+        return result
+
     def to_json(self) -> str:
         """Convert configuration to JSON
-        
+
         Returns:
             str: Configuration as JSON string
         """
@@ -103,6 +126,10 @@ class PTTConfig:
     def __post_init__(self):
         """Initialize error messages after instance creation"""
         if not self.error_messages:
+            # Imported here (not at module top) to keep config.py PyPtt-free
+            # at import time.
+            from PyPtt import exceptions as PTT_exceptions
+
             self.error_messages = {
                 PTT_exceptions.NoSuchUser: "PTT 登入失敗！\n找不到使用者",
                 PTT_exceptions.WrongIDorPassword: "PTT 登入失敗！\n帳號或密碼錯誤",
@@ -137,10 +164,19 @@ class PTTConfig:
         Returns:
             PTTConfig: PTT configuration
         """
-        timezone_hours = int(os.getenv("timezone_hours", "8"))
-        max_retries = int(os.getenv("ptt_max_retries", "3"))
-        retry_delay = int(os.getenv("ptt_retry_delay", "2"))
-        connection_timeout = int(os.getenv("ptt_connection_timeout", "30"))
+        def _int_env(name: str, default: str) -> int:
+            try:
+                return int(os.getenv(name, default))
+            except ValueError as e:
+                raise ConfigValidationError(f"{name} must be an integer") from e
+
+        # Prefer the convention-consistent ``ptt_timezone_hours``; fall back to
+        # the legacy ``timezone_hours`` for backward compatibility.
+        timezone_env = "ptt_timezone_hours" if os.getenv("ptt_timezone_hours") is not None else "timezone_hours"
+        timezone_hours = _int_env(timezone_env, "8")
+        max_retries = _int_env("ptt_max_retries", "3")
+        retry_delay = _int_env("ptt_retry_delay", "2")
+        connection_timeout = _int_env("ptt_connection_timeout", "30")
         kick_other_session = os.getenv("ptt_kick_other_session", "true").lower() == "true"
         
         config = cls(
@@ -179,16 +215,7 @@ class LogConfig:
     log_format: str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
     log_level: int = logging.INFO
     debug_mode: bool = False
-    
-    def validate(self) -> None:
-        """Validate configuration
-        
-        Raises:
-            ConfigValidationError: If configuration is invalid
-        """
-        # No validation needed for console-only logging
-        pass
-    
+
     @classmethod
     def from_env(cls) -> 'LogConfig':
         """Load configuration from environment variables
@@ -241,27 +268,23 @@ class AppConfig:
     telegram: TelegramConfig
     ptt: PTTConfig
     log: LogConfig
-    test_mode: bool = False
-    
+
     @classmethod
     def from_env(cls) -> 'AppConfig':
         """Load configuration from environment variables
-        
+
         Returns:
             AppConfig: Application configuration
         """
-        test_mode = os.getenv("TEST_MODE", "false").lower() == "true"
-        
         return cls(
             telegram=TelegramConfig.from_env(),
             ptt=PTTConfig.from_env(),
             log=LogConfig.from_env(),
-            test_mode=test_mode
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary
-        
+
         Returns:
             Dict[str, Any]: Configuration as dictionary
         """
@@ -269,7 +292,6 @@ class AppConfig:
             "telegram": self.telegram.to_dict(),
             "ptt": self.ptt.to_dict(),
             "log": self.log.to_dict(),
-            "test_mode": self.test_mode
         }
     
     def to_json(self) -> str:

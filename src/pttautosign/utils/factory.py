@@ -2,6 +2,7 @@
 Factory module for creating service instances.
 """
 
+from datetime import timezone, timedelta
 from typing import Dict, Any
 from pttautosign.utils.config import AppConfig, TelegramConfig, PTTConfig
 from pttautosign.utils.interfaces import NotificationService, LoginService
@@ -27,7 +28,10 @@ class ServiceFactory:
             NotificationService: Notification service instance
         """
         if "notification" not in self._services:
-            self._services["notification"] = TelegramBot(self.app_config.telegram)
+            # Share the PTT timezone so error-notification timestamps match the
+            # login success messages.
+            tz = timezone(timedelta(hours=self.app_config.ptt.timezone_hours))
+            self._services["notification"] = TelegramBot(self.app_config.telegram, tz=tz)
         return self._services["notification"]
     
     def get_login_service(self) -> LoginService:

@@ -13,6 +13,7 @@ dist/
 # 環境和配置
 .env
 *.env
+.env.*
 .venv
 env/
 venv/
@@ -39,6 +40,13 @@ execution_count
 # Docker
 *.tar
 .dockerignore
+
+# 測試與工具產物
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.claude/
 
 # 文檔
 architecture_improvements.md

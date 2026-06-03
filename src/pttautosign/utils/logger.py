@@ -49,26 +49,26 @@ def setup_logging(config: Optional[LogConfig] = None) -> logging.Logger:
     # Create a custom formatter that shortens the logger name and adds colors
     class ColorShortNameFormatter(logging.Formatter):
         def format(self, record):
-            # Shorten the logger name to just the last part or last two parts
-            parts = record.name.split('.')
-            if len(parts) > 2:
-                # For deeply nested modules, show only the last two parts
-                record.name = '.'.join(parts[-2:])
-            
-            # Add colors based on log level
-            levelname = record.levelname
-            if levelname in COLORS:
-                # Store original levelname
-                original_levelname = record.levelname
-                # Apply color
-                record.levelname = f"{COLORS[levelname]}{levelname}{COLORS['RESET']}"
-                # Format the record
-                result = super().format(record)
-                # Restore original levelname
-                record.levelname = original_levelname
-                return result
-            else:
+            # LogRecord is shared across handlers/formatters, so any field we
+            # change must be restored afterwards (the original code leaked the
+            # shortened name onto the record). Save → mutate → format → restore.
+            original_name = record.name
+            original_levelname = record.levelname
+            try:
+                parts = original_name.split('.')
+                if len(parts) > 2:
+                    # For deeply nested modules, show only the last two parts
+                    record.name = '.'.join(parts[-2:])
+
+                if original_levelname in COLORS:
+                    record.levelname = (
+                        f"{COLORS[original_levelname]}{original_levelname}{COLORS['RESET']}"
+                    )
+
                 return super().format(record)
+            finally:
+                record.name = original_name
+                record.levelname = original_levelname
     
     log_formatter = ColorShortNameFormatter(log_format, datefmt="%Y-%m-%d %H:%M:%S")
 
@@ -90,9 +90,14 @@ def setup_logging(config: Optional[LogConfig] = None) -> logging.Logger:
     
     # Set PyPtt logger to a higher level to suppress its logs
     logging.getLogger('PyPtt').setLevel(logging.ERROR)
-    
-    # Set asyncio logger to WARNING to reduce noise
-    logging.getLogger('asyncio').setLevel(logging.WARNING)
+
+    # Force noisy third-party loggers to WARNING even when DEBUG_MODE=true.
+    # Their DEBUG output dumps raw protocol frames that contain the PTT
+    # username/password and the Telegram bot token URL — never let them
+    # bypass our redaction discipline.
+    for noisy in ("asyncio", "websockets", "websockets.client",
+                  "websockets.server", "urllib3", "requests"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     
     # Log system information
     logger = logging.getLogger(__name__)
