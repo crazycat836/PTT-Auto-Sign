@@ -245,7 +245,10 @@ poetry run flake8 src/
    python -m pttautosign.main --test-login
    
    # 使用 Docker 測試
-   docker build -t pttautosign-dev .
+   # 請依「實際執行容器的主機」架構來 build。在 Apple Silicon (arm64) 上
+   # 要加 --platform，讓 image 對應 amd64/x86_64 主機（多數 NAS / VPS），
+   # 否則容器啟動時會出現 "exec format error"。
+   docker build --platform linux/amd64 -t pttautosign-dev .
    docker run --rm -e TEST_MODE=true pttautosign-dev
    ```
 
