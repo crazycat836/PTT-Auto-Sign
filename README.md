@@ -242,7 +242,10 @@ poetry run pytest --cov=pttautosign --cov-report=term-missing
    python -m pttautosign.main --test-login
    
    # Test with Docker
-   docker build -t pttautosign-dev .
+   # Build for the host that will RUN the container. On Apple Silicon (arm64),
+   # add --platform so the image matches an amd64/x86_64 host (e.g. most NAS/VPS),
+   # otherwise the container fails at start with "exec format error".
+   docker build --platform linux/amd64 -t pttautosign-dev .
    docker run --rm -e TEST_MODE=true pttautosign-dev
    ```
 
