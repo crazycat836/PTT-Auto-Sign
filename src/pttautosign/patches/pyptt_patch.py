@@ -107,15 +107,19 @@ class PyPttPatcher:
             logger.debug("PyPtt logging-patch traceback", exc_info=True)
 
     def _apply_special_patches(self) -> None:
-        """Strip ANSI escape codes from screens.get_data output when present."""
+        """Apply targeted screens-module tweaks (ANSI stripping, main-menu detection)."""
         try:
             import PyPtt.screens as screens
         except ImportError:
             return
 
-        if not hasattr(screens, "get_data"):
-            return
+        if hasattr(screens, "get_data"):
+            self._patch_ansi_stripping(screens)
 
+        self._patch_mainmenu_detection(screens)
+
+    def _patch_ansi_stripping(self, screens) -> None:
+        """Strip ANSI escape codes from screens.get_data output when present."""
         original_get_data = screens.get_data
         ansi_re = re.compile(r"\x1B\[\d+;*\d*m")
 
@@ -126,6 +130,22 @@ class PyPttPatcher:
             return result
 
         screens.get_data = patched_get_data
+
+    def _patch_mainmenu_detection(self, screens) -> None:
+        """Drop the brittle '[呼叫器]' marker from PyPtt's main-menu detection.
+
+        ``login()`` only succeeds if every string in ``screens.Target.MainMenu``
+        is present on the final screen. ``[呼叫器]`` is PTT's default corner
+        display, but it is a per-account preference: an account that has
+        switched the corner to a date/時辰 display (toggled from within PTT)
+        never shows that marker again, so a real, successful login is
+        misreported as ``LoginError`` on every single attempt. The other two
+        markers ('離開，再見' from the (G)oodbye menu item, '人, 我是' from the
+        online-count footer) are already unique to the main menu on their own.
+        """
+        marker = "[呼叫器]"
+        if marker in screens.Target.MainMenu:
+            screens.Target.MainMenu.remove(marker)
 
 
 def apply_patches() -> bool:

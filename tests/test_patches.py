@@ -24,3 +24,18 @@ def test_total_failure_returns_false(monkeypatch):
     monkeypatch.setattr(patcher, "suppress_pyptt_warnings", lambda: False)
     monkeypatch.setattr(patcher, "direct_patch_pyptt", lambda: False)
     assert patcher.apply_all() is False
+
+
+def test_mainmenu_detection_drops_unreliable_caller_marker():
+    # Some accounts customize the main-menu corner display away from PTT's
+    # default '[呼叫器]' marker (e.g. to a date/時辰 display), which makes
+    # every login falsely raise LoginError even though it actually
+    # succeeded. apply_patches() must strip that marker so detection relies
+    # only on the two markers every main menu always has.
+    import PyPtt.screens as screens
+
+    apply_patches()
+
+    assert "[呼叫器]" not in screens.Target.MainMenu
+    assert "離開，再見" in screens.Target.MainMenu
+    assert "人, 我是" in screens.Target.MainMenu

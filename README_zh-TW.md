@@ -295,7 +295,7 @@ poetry run flake8 src/
 
 ## 📊 專案統計
 
-- **目前版本**：1.3.2
+- **目前版本**：1.3.5
 - **Python 版本**：3.14+
 - **依賴管理**：使用 Poetry
 - **Docker 映像**：`crazycat836/pttautosign:latest`

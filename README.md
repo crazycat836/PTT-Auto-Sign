@@ -290,7 +290,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 📊 Project Statistics
 
-- **Current Version**: 1.3.4
+- **Current Version**: 1.3.5
 - **Python Version**: 3.11+
 - **Dependencies**: Managed with Poetry
 - **Docker Image**: `crazycat836/pttautosign:latest`
