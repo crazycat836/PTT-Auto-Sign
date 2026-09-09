@@ -42,18 +42,35 @@ class PyPttPatcher:
         return False
 
     def patch_websockets(self) -> bool:
-        """Backfill USER_AGENT attribute on websockets.http when missing."""
+        """Backfill USER_AGENT attribute on websockets.http when missing.
+
+        websockets 17.0 removed the ``websockets.http`` submodule outright, and
+        PyPtt 2.x no longer imports it. On that combination there is nothing to
+        backfill, which is a no-op rather than a failure: returning False there
+        would drag ``apply_all()`` into a degraded state over a patch that is
+        simply no longer needed.
+        """
         try:
             import websockets
+        except ImportError:
+            return False
+
+        try:
             import websockets.http
+        except ImportError:
+            logger.debug(
+                "websockets %s has no .http submodule; nothing to backfill",
+                getattr(websockets, "__version__", "unknown"),
+            )
+            return True
+
+        try:
             if not hasattr(websockets.http, "USER_AGENT"):
                 py_version = sys.version.split()[0]
                 ws_version = getattr(websockets, "__version__", "unknown")
                 websockets.http.USER_AGENT = f"Python/{py_version} websockets/{ws_version}"
                 logger.debug("Added USER_AGENT to websockets.http")
             return True
-        except ImportError:
-            return False
         except Exception as e:
             logger.error(f"Failed to patch websockets: {type(e).__name__}: {e}")
             logger.debug("websockets patch traceback", exc_info=True)
@@ -140,12 +157,21 @@ class PyPttPatcher:
         switched the corner to a date/時辰 display (toggled from within PTT)
         never shows that marker again, so a real, successful login is
         misreported as ``LoginError`` on every single attempt. The other two
-        markers ('離開，再見' from the (G)oodbye menu item, '人, 我是' from the
-        online-count footer) are already unique to the main menu on their own.
+        markers (the (G)oodbye menu item and the online-count footer) are already
+        unique to the main menu on their own.
+
+        Match on the substring, not the exact string: PyPtt spells this marker
+        differently across versions -- '[呼叫器]' in 1.3.3, '呼叫器' in 2.3.7.
+        An exact-match removal silently does nothing on a version it does not
+        know about, which brings the false-negative login back with no visible
+        error: the worst possible failure mode for this particular patch.
+
+        Mutate the list in place; PyPtt holds its own reference to it.
         """
-        marker = "[呼叫器]"
-        if marker in screens.Target.MainMenu:
-            screens.Target.MainMenu.remove(marker)
+        menu = screens.Target.MainMenu
+        for marker in [m for m in menu if "呼叫器" in m]:
+            menu.remove(marker)
+            logger.debug("Removed unreliable main-menu marker: %r", marker)
 
 
 def apply_patches() -> bool:
