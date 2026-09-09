@@ -553,23 +553,27 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyptt"
-version = "1.3.3"
-description = "PyPtt"
+version = "2.3.7"
+description = "PyPtt github: https://github.com/PyPtt/PyPtt"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "pyptt-1.3.3-py3-none-any.whl", hash = "sha256:a86c501e23f3a24b033f59790e09fcbe58327b21b0ae02bc37ed8584acc37694"},
-    {file = "pyptt-1.3.3.tar.gz", hash = "sha256:9f6aa94c657c3b50f6ad461fcfaa9c4413309ddaed4315dc5abd4acd3bbdd224"},
+    {file = "pyptt-2.3.7-py3-none-any.whl", hash = "sha256:8110aed762a7176a2a8ff04c478941c10be26b8f807ff4ea40a267eea43fa712"},
+    {file = "pyptt-2.3.7.tar.gz", hash = "sha256:f98b2b8b17ae0468847355273da8f08a415042e6c0d50d1041e8e957ab10b0ee"},
 ]
 
 [package.dependencies]
 AutoStrEnum = "*"
+certifi = "*"
 progressbar2 = "*"
 PyYAML = "*"
-requests = "*"
-uao = "*"
-websockets = "*"
+requests = ">=2.32"
+websockets = ">=12"
+
+[package.extras]
+api = ["fastapi", "uvicorn[standard]"]
+dev = ["Furo", "flake8", "pygments (>=2.15)", "pyte", "pytest", "python-dotenv", "sphinx", "sphinx-copybutton", "sphinx-sitemap"]
 
 [[package]]
 name = "pytest"
@@ -839,18 +843,6 @@ files = [
 ]
 
 [[package]]
-name = "uao"
-version = "0.2.0"
-description = "Big5-UAO encoder/decoder in pure Python"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "uao-0.2.0-py3-none-any.whl", hash = "sha256:090c7dd9efa46367dda6a9f1e9719639cc12bfbeb46107363f0ee03d142dda80"},
-    {file = "uao-0.2.0.tar.gz", hash = "sha256:acded40ed0848852c58c06c34126cec51d205a1f0cf93d3e37f9aac96cf4de85"},
-]
-
-[[package]]
 name = "urllib3"
 version = "2.7.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -990,4 +982,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "22d094fe8cf47045a26b2cc652885524de5678f8ca6a09626a0bdbb94f651bd4"
+content-hash = "07df20e3313bc3c3e1b6598d70398548e4fd7189ecc1e77b90120c6b35182eeb"

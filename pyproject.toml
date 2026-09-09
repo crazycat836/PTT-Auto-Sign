@@ -12,7 +12,7 @@ keywords = ["ptt", "bbs", "automation", "sign-in"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-pyptt = "^1.0.6"
+pyptt = ">=1.0.6,<3.0.0"
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
 # PyPtt (<=1.3.3) imports the deprecated `websockets.http` submodule, which
