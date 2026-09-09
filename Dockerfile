@@ -11,9 +11,12 @@ COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
 # 將套件與相依安裝到獨立 prefix，方便整包複製到最終 image
+# 只裝 pyproject 宣告的東西。用 pip 另外塞套件會讓它不在 poetry.lock 也不在
+# GitHub 的相依圖裡，等於沒有人在幫它看資安更新。
+# （原本這裡多裝了 telnetlib3：PyPtt 預設走 WEBSOCKETS，且 PTT1/PTT2 這兩個
+#   host 根本不接受 TELNET 模式，本專案也沒有指定 connect_mode，用不到。）
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir --prefix=/install . \
-    && pip install --no-cache-dir --prefix=/install telnetlib3
+    && pip install --no-cache-dir --prefix=/install .
 
 # 第二階段：執行環境
 FROM python:3.11-alpine

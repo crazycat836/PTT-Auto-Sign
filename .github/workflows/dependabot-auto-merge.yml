@@ -5,6 +5,7 @@ on: pull_request
 permissions:
   contents: write
   pull-requests: write
+  checks: read
 
 jobs:
   auto-merge:
@@ -17,9 +18,57 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Enable auto-merge for minor/patch updates
-        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
-        run: gh pr merge --auto --squash "$PR_URL"
+      # 執行期相依的大版本升級要人看過；其餘（patch / minor，以及開發工具的
+      # 大版本，例如 pytest 8→9）都交給 CI 把關後自動合併。
+      - name: Decide whether this PR may auto-merge
+        id: decide
+        run: |
+          if [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
+            echo "merge=true" >> "$GITHUB_OUTPUT"
+          elif [ "$DEP_TYPE" = "direct:development" ] || [ "$DEP_TYPE" = "indirect" ]; then
+            echo "merge=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::執行期相依的大版本升級，保留給人工審查。"
+          fi
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEP_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+
+      # 這個 repo 沒有設必要狀態檢查，`gh pr merge --auto` 會在 CI 還沒回報前
+      # 就直接合併。這裡改成盯住 CI 的 test check，過了才往下走。
+      # 不能用 `gh pr checks --watch`：本工作流程自己也是這張 PR 上的一個 check，
+      # 那樣會等到自己身上而卡死。
+      - name: Wait for CI to pass
+        if: steps.decide.outputs.merge == 'true'
+        run: |
+          for i in $(seq 1 60); do
+            state=$(gh pr checks "$PR_URL" --json name,state \
+              --jq '.[] | select(.name == "test") | .state' 2>/dev/null | head -1) || true
+            case "$state" in
+              SUCCESS)
+                echo "CI 通過，繼續合併。"
+                exit 0
+                ;;
+              FAILURE|CANCELLED|TIMED_OUT|ACTION_REQUIRED|STARTUP_FAILURE|STALE)
+                echo "::error::CI 結果為 $state，不合併這張 PR。"
+                exit 1
+                ;;
+              *)
+                echo "等 CI（目前：${state:-尚未回報}）… ($i/60)"
+                sleep 10
+                ;;
+            esac
+          done
+          echo "::error::等 CI 超過 10 分鐘仍未結束，不合併這張 PR。"
+          exit 1
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge
+        if: steps.decide.outputs.merge == 'true'
+        run: gh pr merge --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -16,11 +16,36 @@ jobs:
         with:
           python-version: "3.11"
 
+      # 固定 Poetry 版本：不鎖的話 Poetry 自己出新版就可能讓 CI 無預警壞掉，
+      # 那也是「套件問題」的一種來源。
       - name: Install Poetry
-        run: pipx install poetry
+        run: pipx install poetry==2.4.1
+
+      - name: Cache virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ runner.os }}-py3.11-${{ hashFiles('poetry.lock') }}
+          restore-keys: poetry-${{ runner.os }}-py3.11-
+
+      # poetry.lock 與 pyproject.toml 對不起來時直接擋下來。Dependabot 只改
+      # 其中一邊的話，這一步會先失敗，不會靜靜合併進 main。
+      - name: Check lock file is in sync
+        run: poetry check --lock
 
       - name: Install dependencies
         run: poetry install --no-interaction
 
       - name: Run tests
         run: poetry run pytest
+
+      # 確認 import 不依賴 setuptools/pkg_resources——那是先前反覆冒出資安警告
+      # 的來源，移掉之後要有東西守著，避免哪天又被當成隱性相依帶回來。
+      - name: Assert runtime does not need setuptools
+        run: |
+          poetry run python - <<'PY'
+          import pttautosign.main  # noqa: F401
+          for mod in ("setuptools", "pkg_resources"):
+              assert mod not in __import__("sys").modules, f"{mod} 被 import 進執行期了"
+          print("執行期未載入 setuptools / pkg_resources")
+          PY
