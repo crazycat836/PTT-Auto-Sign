@@ -43,7 +43,12 @@ jobs:
           ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
 
       # 這個 repo 沒有設必要狀態檢查，`gh pr merge --auto` 會在 CI 還沒回報前
-      # 就直接合併。這裡改成盯住 CI 的 test check，過了才往下走。
+      # 就直接合併。這裡改成盯住 CI 的 ci-ok check，過了才往下走。
+      #
+      # 盯 ci-ok 而不是 test：CI 跑 Python matrix，check 名稱是
+      # "test (py3.11)"…，數量還會隨 matrix 增減而變動。ci-ok 是匯總 job，
+      # 名字固定，任何一個 matrix 沒過它就跟著失敗。
+      #
       # 不能用 `gh pr checks --watch`：本工作流程自己也是這張 PR 上的一個 check，
       # 那樣會等到自己身上而卡死。
       - name: Wait for CI to pass
@@ -51,7 +56,7 @@ jobs:
         run: |
           for i in $(seq 1 60); do
             state=$(gh pr checks "$PR_URL" --json name,state \
-              --jq '.[] | select(.name == "test") | .state' 2>/dev/null | head -1) || true
+              --jq '.[] | select(.name == "ci-ok") | .state' 2>/dev/null | head -1) || true
             case "$state" in
               SUCCESS)
                 echo "CI 通過，繼續合併。"

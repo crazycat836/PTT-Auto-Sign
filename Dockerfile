@@ -27,11 +27,12 @@ LABEL org.opencontainers.image.title="PTTAutoSign" \
       org.opencontainers.image.source="https://github.com/crazycat836/PTTAutoSign" \
       org.opencontainers.image.licenses="Apache-2.0"
 
-# 需要使用者提供的環境變數 (默認為空，運行時必須提供)
-ENV PTT_USERNAME="" \
-    PTT_PASSWORD="" \
-    TELEGRAM_BOT_TOKEN="" \
-    TELEGRAM_CHAT_ID=""
+# 執行時必須提供的環境變數（用 -e 或 --env-file 傳入，不在此宣告）：
+#   PTT_USERNAME、PTT_PASSWORD、TELEGRAM_BOT_TOKEN、TELEGRAM_CHAT_ID
+#
+# 這裡刻意不寫 ENV FOO=""。把憑證類變數宣告在 Dockerfile 裡會觸發 buildkit 的
+# SecretsUsedInArgOrEnv 警告，而且宣告成空字串沒有任何好處：
+# docker_runner.sh 用 [ -z "$VAR" ] 檢查，對「未設定」與「設為空字串」行為相同。
 
 # 設定時區
 ENV TZ=Asia/Taipei
