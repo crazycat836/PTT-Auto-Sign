@@ -12,14 +12,9 @@ keywords = ["ptt", "bbs", "automation", "sign-in"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-pyptt = "^1.0.6"
+pyptt = "^2.3.7"
 python-dotenv = "^1.0.0"
 requests = "^2.31.0"
-# PyPtt (<=1.3.3) imports the deprecated `websockets.http` submodule, which
-# was removed outright in websockets 17.0. Pin below that line until PyPtt
-# itself drops the dependency; without this, `poetry update` silently
-# resolves an incompatible websockets and breaks every PyPtt import.
-websockets = "^16.0"
 
 [build-system]
 requires = ["poetry-core"]
