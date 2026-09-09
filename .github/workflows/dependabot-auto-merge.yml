@@ -18,22 +18,29 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      # 執行期相依的大版本升級要人看過；其餘（patch / minor，以及開發工具的
-      # 大版本，例如 pytest 8→9）都交給 CI 把關後自動合併。
+      # 只有一種情況要人看過：Python 執行期相依的大版本升級（例如 PyPtt 1→2），
+      # 那會換掉實際跑在正式環境的東西。其餘都交給 CI 把關後自動合併——
+      # 包含開發工具的大版本（pytest 8→9）與 GitHub Actions 的大版本
+      # （actions/checkout v4→v5）。
+      #
+      # 注意 ecosystem 這個條件不能省：Actions 的相依也被歸類成
+      # direct:production，只看 dependency-type 會把 checkout v4→v5 這種
+      # CI 已經驗過的升級一起擋掉。
       - name: Decide whether this PR may auto-merge
         id: decide
         run: |
           if [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
             echo "merge=true" >> "$GITHUB_OUTPUT"
-          elif [ "$DEP_TYPE" = "direct:development" ] || [ "$DEP_TYPE" = "indirect" ]; then
-            echo "merge=true" >> "$GITHUB_OUTPUT"
-          else
+          elif [ "$ECOSYSTEM" = "pip" ] && [ "$DEP_TYPE" = "direct:production" ]; then
             echo "merge=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::執行期相依的大版本升級，保留給人工審查。"
+            echo "::notice::Python 執行期相依的大版本升級，保留給人工審查。"
+          else
+            echo "merge=true" >> "$GITHUB_OUTPUT"
           fi
         env:
           UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
           DEP_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
 
       # 這個 repo 沒有設必要狀態檢查，`gh pr merge --auto` 會在 CI 還沒回報前
       # 就直接合併。這裡改成盯住 CI 的 test check，過了才往下走。
