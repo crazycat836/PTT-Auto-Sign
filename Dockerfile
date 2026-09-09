@@ -59,6 +59,23 @@ RUN chmod 0700 /app/scripts/*.sh
 # 設定環境變數
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# 移除只在安裝階段用得到的打包工具。python:3.11-alpine 的 base image 自帶
+# setuptools（目前是 79.0.1），它不在 poetry.lock 也不在 GitHub 相依圖裡，
+# 沒有人會幫它看資安更新——留著只是無人看管的表面積。
+# 已確認 site-packages 裡只有 wheel 自己會 import 它，執行期相依都不碰。
+RUN python -m pip uninstall -y setuptools pip wheel 2>/dev/null || true \
+    && rm -rf /usr/local/lib/python3.11/site-packages/setuptools \
+              /usr/local/lib/python3.11/site-packages/setuptools-* \
+              /usr/local/lib/python3.11/site-packages/pkg_resources \
+              /usr/local/lib/python3.11/site-packages/_distutils_hack \
+              /usr/local/lib/python3.11/site-packages/distutils-precedence.pth \
+              /usr/local/lib/python3.11/site-packages/pip \
+              /usr/local/lib/python3.11/site-packages/pip-* \
+              /usr/local/lib/python3.11/site-packages/wheel \
+              /usr/local/lib/python3.11/site-packages/wheel-* \
+              /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.11 \
+              /usr/local/bin/wheel
+
 # 清理不必要的檔案
 RUN find /app -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /app -name "*.pyc" -delete
