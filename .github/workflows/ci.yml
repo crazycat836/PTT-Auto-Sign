@@ -7,14 +7,21 @@ on:
 
 jobs:
   test:
-    name: test
+    name: test (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # pyproject 宣告 >=3.11,<4.0，就要真的把邊界都測到：3.11 是 Docker
+        # image 實際跑的版本，3.13 是本機開發用的版本。只測 3.11 的話，本機
+        # 過了不代表正式環境過，反過來也一樣。
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
       # 固定 Poetry 版本：不鎖的話 Poetry 自己出新版就可能讓 CI 無預警壞掉，
       # 那也是「套件問題」的一種來源。
@@ -22,11 +29,11 @@ jobs:
         run: pipx install poetry==2.4.1
 
       - name: Cache virtualenv
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pypoetry
-          key: poetry-${{ runner.os }}-py3.11-${{ hashFiles('poetry.lock') }}
-          restore-keys: poetry-${{ runner.os }}-py3.11-
+          key: poetry-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: poetry-${{ runner.os }}-py${{ matrix.python-version }}-
 
       # poetry.lock 與 pyproject.toml 對不起來時直接擋下來。Dependabot 只改
       # 其中一邊的話，這一步會先失敗，不會靜靜合併進 main。
@@ -49,3 +56,20 @@ jobs:
               assert mod not in __import__("sys").modules, f"{mod} 被 import 進執行期了"
           print("執行期未載入 setuptools / pkg_resources")
           PY
+
+  # 單一匯總 check，給 auto-merge 當閘門用。
+  # matrix 會把 check 名稱變成 "test (py3.11)"…，數量還會隨 matrix 增減而變動；
+  # auto-merge 去盯一個會改名的 check 很容易變成盯空。這個 job 的名字固定叫
+  # ci-ok，只要有任何一個 matrix 沒過就跟著失敗。
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: |
+          echo "test matrix result: $RESULT"
+          [ "$RESULT" = "success" ] || exit 1
+        env:
+          RESULT: ${{ needs.test.result }}

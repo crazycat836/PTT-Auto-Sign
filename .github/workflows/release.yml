@@ -1,0 +1,77 @@
+name: Release
+
+# tag 一直落後 pyproject 的版本（v1.3.4 與 v1.3.5 寫進 CHANGELOG 卻從沒被 tag），
+# 因為打 tag 是純手工步驟，很容易漏。改成由 main 上的版本號變動自動觸發：
+# 版本沒變就什麼都不做，變了就建 tag 與 GitHub Release。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read version from pyproject
+        id: ver
+        run: |
+          version=$(python -c "
+          import tomllib
+          print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])
+          ")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "pyproject 版本：$version"
+
+      - name: Skip if tag already exists
+        id: check
+        run: |
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$TAG 已存在，不重複發布。"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+
+      # 從 CHANGELOG 抓這一版的段落當 release notes。抓不到就讓它失敗——
+      # 沒有 changelog 條目的版本不該被發出去。
+      - name: Extract changelog section
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          python - <<'PY' > release-notes.md
+          import os, re, sys
+          version = os.environ["VERSION"]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(
+              rf"^##\s+v?{re.escape(version)}\s*$(.*?)(?=^##\s|\Z)",
+              text, re.M | re.S,
+          )
+          if not m or not m.group(1).strip():
+              sys.exit(f"CHANGELOG.md 裡找不到 v{version} 的段落，不發布。")
+          print(m.group(1).strip())
+          PY
+          echo "--- release notes ---"
+          cat release-notes.md
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+
+      - name: Create tag and release
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$TAG" --notes-file release-notes.md
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
