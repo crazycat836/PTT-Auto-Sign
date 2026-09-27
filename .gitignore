@@ -50,3 +50,7 @@ htmlcov/
 
 # 文檔
 architecture_improvements.md
+
+# Agent instructions (local only)
+/AGENTS.md
+/CLAUDE.md
