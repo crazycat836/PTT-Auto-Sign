@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.1
+- **Bug fix – 容器不理會 `DISABLE_NOTIFICATIONS`**: v1.4.0 的 `docker_runner.sh` 在每次排程（測試模式、固定時間、每日隨機時間）與 `--run-ptt-login` 執行前都會 `unset DISABLE_NOTIFICATIONS`，用 `-e DISABLE_NOTIFICATIONS=true` 啟動的容器照樣收到每一則登入通知；`notify_schedule_update()` 送排程通知時也不看這個變數。v1.4.1 在 `DISABLE_NOTIFICATIONS=true` 時登入通知與排程通知都不送，比對不分大小寫，與 `config.py` 的 `.lower() == "true"` 一致。啟動時的憑證驗證一律不送通知，這個暫時停用只套用在那一次 Python 執行，不改動使用者的設定。
+- **Bug fix – 容器 log 的登入統計是空值**: `python:3.11-alpine` 的 `grep` 是 busybox，`grep -o "[0-9]*"` 什麼都不印卻回傳 0，`|| echo "0"` 不會觸發，v1.4.0 每次執行的 log 都是 `總共 0 個帳號, 成功 , 失敗`。第二段改用 `[0-9][0-9]*`。只影響這行 log，簽到成功與否看的是 Python 的狀態碼。
+- **Dependency – PyPtt 2.3.7 → 2.3.9**: `pyproject.toml` 的下限一併提高到 2.3.9。另外 urllib3 2.7.0 → 2.8.0。
+- **CI – GitHub Actions 更新**: `actions/checkout` v5 → v7、`actions/setup-python` v6 → v7、`actions/cache` v4 → v6。
+- 驗證：在 `linux/amd64` image 內跑真正的 entrypoint 與 Python 模組，只把 PyPtt 登入、Telegram 送出與 `sleep` 換成 stub。`DISABLE_NOTIFICATIONS=true`（含 `TRUE`）時，三種排程模式與 `--run-ptt-login` 都送出 0 則；未設定或 `false` 時照常送出登入與排程通知。每次執行的統計 log 都是 `總共 1 個帳號, 成功 1, 失敗 0`。PyPtt 2.3.9 的 `screens.Target.MainMenu` 仍含 `呼叫器`，補丁會把它移除。**尚未用真帳號連上 PTT 與 Telegram 實測**。
+
 ## v1.4.0
 - **Dependency – PyPtt 1.3.3 → 2.3.7**: 1.3.3 發布於 2025-09-26，2.3.7 發布於 2026-08-20，中間相隔 328 天、33 個版本。v1.3.5 當時判斷「2.x 改了本專案 patch 的內部實作」而刻意停在 1.x——那個判斷是對的（見下一條），但代價是整條 2.x 線被 `dependabot.yml` 的 `ignore: "*" semver-major` 擋在視線外將近一年。升級前逐項比對過本專案用到的介面：`API.__init__` / `login` / `get_user` / `logout` 四個簽章相同、`PTT.log.SILENT` 存在、用到的六個 exception 都在、`get_user` 回傳的 13 個欄位完全相同（以 AST 解析兩邊的 return dict 比對，含本專案讀的 `login_count` 與 `mail`）。
 - **Bug fix – 主選單補丁在 PyPtt 2.x 會靜默失效**: `_patch_mainmenu_detection` 寫死 `marker = "[呼叫器]"` 做完全比對，但 PyPtt 各版拼法不同（1.3.3 是 `[呼叫器]`，2.3.7 是不帶方括號的 `呼叫器`）。在不認識的版本上那個 `if` 不成立，補丁什麼都不做，v1.3.5 修掉的登入誤判會無聲無息回來。改成比對子字串「呼叫器」並原地修改 list。對應的測試原本斷言 `"[呼叫器]" not in MainMenu`，在 2.3.7 上是假通過（標記其實還在，只是少了方括號），一併改成比對子字串，另補一個直接餵三種拼法的測試。
