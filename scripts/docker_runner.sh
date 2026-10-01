@@ -124,8 +124,10 @@ run_ptt_login() {
     fi
 
     # 提取登入統計
-    successful_logins=$(echo "$output" | grep -o "登入成功：[0-9]*" | grep -o "[0-9]*" || echo "0")
-    failed_logins=$(echo "$output" | grep -o "登入失敗：[0-9]*" | grep -o "[0-9]*" || echo "0")
+    # 數字要用 [0-9][0-9]* 而不是 [0-9]*：busybox grep -o 遇到能比對空字串的 pattern
+    # 會什麼都不印卻回傳 0，|| echo "0" 就不會生效。
+    successful_logins=$(echo "$output" | grep -o "登入成功：[0-9]*" | grep -o "[0-9][0-9]*" || echo "0")
+    failed_logins=$(echo "$output" | grep -o "登入失敗：[0-9]*" | grep -o "[0-9][0-9]*" || echo "0")
     total_accounts=$((successful_logins + failed_logins))
 
     # 顯示結果摘要
