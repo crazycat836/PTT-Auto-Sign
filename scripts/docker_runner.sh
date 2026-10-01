@@ -9,7 +9,8 @@
 # 模式：
 #   - 測試模式 (TEST_MODE=true)：每分鐘執行一次，共 3 次後結束容器。
 #   - 生產模式 + 每日隨機時間 (RANDOM_DAILY_TIME=true)：每天於 9-17 點的
-#     隨機時間執行一次，並在每次排程更新時發送 Telegram 通知。
+#     隨機時間執行一次，並在每次排程更新時發送 Telegram 通知
+#     （DISABLE_NOTIFICATIONS=true 時不發）。
 #   - 生產模式 + 固定時間 (RANDOM_DAILY_TIME=false)：啟動時抽一次隨機時間，
 #     之後每天於該固定時間執行。
 
@@ -17,6 +18,12 @@
 export TEST_MODE=${TEST_MODE:-false}
 export DEBUG_MODE=${DEBUG_MODE:-false}
 export RANDOM_DAILY_TIME=${RANDOM_DAILY_TIME:-true}  # 控制是否每天使用不同的隨機時間
+
+# 保留使用者設定的通知開關：驗證憑證時 run_ptt_login 會暫時把 DISABLE_NOTIFICATIONS
+# 設為 true，排程執行時要還原成這個值。轉小寫是為了與 Python 端
+# （os.getenv(...).lower() == "true"）的判斷一致。
+USER_DISABLE_NOTIFICATIONS=$(printf '%s' "${DISABLE_NOTIFICATIONS:-false}" | tr '[:upper:]' '[:lower:]')
+readonly USER_DISABLE_NOTIFICATIONS
 
 # 設置時區
 export TZ=${TZ:-Asia/Taipei}
@@ -103,8 +110,9 @@ run_ptt_login() {
         log_debug "已暫時停用通知功能（用於測試）"
         export DISABLE_NOTIFICATIONS=true
     else
-        log_debug "已啟用通知功能"
-        unset DISABLE_NOTIFICATIONS
+        # 還原成使用者的設定；不能 unset，否則使用者設的 DISABLE_NOTIFICATIONS=true 會被清掉。
+        log_debug "通知功能依使用者設定（DISABLE_NOTIFICATIONS=${USER_DISABLE_NOTIFICATIONS}）"
+        export DISABLE_NOTIFICATIONS="$USER_DISABLE_NOTIFICATIONS"
     fi
 
     # 執行 PTT 自動簽到程式
@@ -199,10 +207,17 @@ notify_schedule_update() {
     local hour=$1 minute=$2
 
     [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || return 0
+    # 看 USER_DISABLE_NOTIFICATIONS 而不是 DISABLE_NOTIFICATIONS：
+    # 後者在驗證憑證後仍是暫時設定的 true。
+    if [ "$USER_DISABLE_NOTIFICATIONS" = "true" ]; then
+        log_debug "已停用通知（DISABLE_NOTIFICATIONS=true），略過排程更新通知"
+        return 0
+    fi
 
     export NEW_HOUR="$hour"
-    export NEW_MINUTE="$(printf '%02d' "$minute")"
-    export NEW_TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+    NEW_MINUTE=$(printf '%02d' "$minute")
+    NEW_TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+    export NEW_MINUTE NEW_TIMESTAMP
 
     cd /app && python - <<'PYTHON'
 import os
@@ -238,10 +253,26 @@ PYTHON
     return 0
 }
 
+# 等待中的背景 sleep 的 PID，收到停止訊號時由 handle_stop_signal 收掉。
+SLEEP_PID=""
+
 # 睡到指定秒數後再執行；秒數為 0 時直接返回。
+# sleep 放背景再 wait：bash 在前景指令執行中收到訊號，要等指令結束才執行 trap；
+# wait 則會被已設 trap 的訊號立即中斷，docker stop 才不會等到 sleep 結束。
 sleep_seconds() {
     local seconds=$1
-    [ "$seconds" -gt 0 ] && sleep "$seconds"
+    [ "$seconds" -gt 0 ] || return 0
+    sleep "$seconds" &
+    SLEEP_PID=$!
+    wait "$SLEEP_PID"
+    SLEEP_PID=""
+}
+
+# 收到停止訊號時乾淨退出，並收掉等待中的 sleep，避免留下孤兒行程。
+handle_stop_signal() {
+    log_message "收到停止訊號，正在結束容器..."
+    [ -n "$SLEEP_PID" ] && kill "$SLEEP_PID" 2>/dev/null
+    exit 0
 }
 
 # 測試模式：每分鐘執行一次，共 TEST_RUNS 次後結束。
@@ -251,7 +282,7 @@ run_test_schedule() {
     while [ $i -le $TEST_RUNS ]; do
         log_message "測試執行第 ${i} / ${TEST_RUNS} 次"
         run_ptt_login true
-        [ $i -lt $TEST_RUNS ] && sleep "$TEST_INTERVAL"
+        [ $i -lt $TEST_RUNS ] && sleep_seconds "$TEST_INTERVAL"
         i=$((i + 1))
     done
     log_message "✅ 已完成 ${TEST_RUNS} 次測試執行，容器即將結束"
@@ -359,7 +390,7 @@ main() {
     process_args "$@"
 
     # 收到停止訊號時乾淨退出（docker stop 送 SIGTERM 給 PID1）。
-    trap 'log_message "收到停止訊號，正在結束容器..."; exit 0' TERM INT
+    trap handle_stop_signal TERM INT
 
     # 顯示啟動標誌和設定
     log_message "====================================="
