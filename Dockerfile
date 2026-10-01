@@ -24,7 +24,7 @@ FROM python:3.11-alpine
 # OCI image labels — surfaced on Docker Hub.
 LABEL org.opencontainers.image.title="PTTAutoSign" \
       org.opencontainers.image.description="Automatically sign in to PTT BBS daily and report via Telegram." \
-      org.opencontainers.image.source="https://github.com/crazycat836/PTTAutoSign" \
+      org.opencontainers.image.source="https://github.com/crazycat836/PTT-Auto-Sign" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 # 執行時必須提供的環境變數（用 -e 或 --env-file 傳入，不在此宣告）：

@@ -17,8 +17,8 @@ dependencies = [
 ]
 
 [project.urls]
-repository = "https://github.com/crazycat836/PTTAutoSign"
-documentation = "https://github.com/crazycat836/PTTAutoSign/blob/main/README.md"
+repository = "https://github.com/crazycat836/PTT-Auto-Sign"
+documentation = "https://github.com/crazycat836/PTT-Auto-Sign/blob/main/README.md"
 
 [project.scripts]
 pttautosign = "pttautosign.main:main"

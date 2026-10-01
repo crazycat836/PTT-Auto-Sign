@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](LICENSE)
 [![Issues](https://img.shields.io/github/issues/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/issues)
 [![Release](https://img.shields.io/github/v/release/crazycat836/ptt-auto-sign?style=for-the-badge&color=5D6D7E)](https://github.com/crazycat836/ptt-auto-sign/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.14-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.11+-5D6D7E?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
 [![Docker Pulls](https://img.shields.io/docker/pulls/crazycat836/pttautosign?style=for-the-badge&color=5D6D7E)](https://hub.docker.com/r/crazycat836/pttautosign)
 
 [English](README.md) | 繁體中文
@@ -46,10 +46,10 @@ Docker 是 PTT Auto Sign 測試和生產環境部署的首選方法。它提供�
      -e TELEGRAM_CHAT_ID=你的聊天ID \
      crazycat836/pttautosign:latest
      
-   # 選項 2：使用測試模式（每分鐘執行一次，共3次）
+   # 選項 2：使用測試模式（每分鐘執行一次，共3次，跑完後容器會自行結束）
+   # 這裡不要加 --restart，否則容器結束後會被 Docker 重新啟動，測試又從頭跑一輪
    docker run -d \
      --name ptt-auto-sign-test \
-     --restart unless-stopped \
      -e PTT_USERNAME=你的用戶名 \
      -e PTT_PASSWORD=你的密碼 \
      -e TELEGRAM_BOT_TOKEN=你的Bot令牌 \
@@ -66,9 +66,9 @@ Docker 是 PTT Auto Sign 測試和生產環境部署的首選方法。它提供�
 2. **測試模式**：容器每分鐘執行一次，共執行3次，適用於測試您的設置。
 
 在任一模式下，容器都會：
-1. **驗證憑證**：在設置 cron 任務前，先執行一次登入測試和通知，確保設置正確
-2. **設置 cron 任務**：根據所選模式設置相應的排程
-3. **保持運行**：監控並執行排程任務
+1. **驗證憑證**：進入排程前先執行一次登入測試，確認設定正確（這次測試不發 Telegram 通知）
+2. **排程**：`scripts/docker_runner.sh` 依所選模式算出下次執行時間，用 sleep 等到時間再執行（映像裡沒有 cron）
+3. **保持運行**：生產模式下容器持續運作；測試模式跑完 3 次後容器會自行結束
 
 查看容器日誌：
 ```bash
@@ -83,7 +83,7 @@ Docker 是 PTT Auto Sign 的推薦部署方法，因為它：
 
 - 確保在不同系統上的一致執行環境
 - 處理所有依賴項和 Python 版本要求
-- 通過容器的 cron 系統提供內建排程功能
+- 由 `scripts/docker_runner.sh` 提供內建排程，不需要 cron
 - 只需重新啟動容器即可輕鬆更新
 - 通過環境變數提供簡單的參數配置
 
@@ -130,7 +130,7 @@ services:
 1. 安裝 Python 3.11+ 和 Poetry：
    ```bash
    # macOS
-   brew install python@3.14 poetry
+   brew install python@3.11 poetry
    
    # Ubuntu/Debian
    sudo apt update
@@ -202,8 +202,8 @@ services:
 
 2. **複製專案並設定**：
    ```bash
-   git clone https://github.com/crazycat836/PTTAutoSign.git
-   cd PTTAutoSign
+   git clone https://github.com/crazycat836/PTT-Auto-Sign.git
+   cd PTT-Auto-Sign
    poetry install
    ```
 
@@ -222,14 +222,11 @@ services:
 # 使用 Black 格式化程式碼
 poetry run black .
 
-# 使用 isort 排序 import 語句
-poetry run isort .
+# 執行單元測試
+poetry run pytest
 
-# 使用 mypy 進行類型檢查
-poetry run mypy src/
-
-# 使用 flake8 進行程式碼檢查
-poetry run flake8 src/
+# 執行測試並產生覆蓋率報告
+poetry run pytest --cov=pttautosign --cov-report=term-missing
 ```
 
 ### 開發工作流程
@@ -270,7 +267,7 @@ poetry run flake8 src/
 2. 簽到失敗
    - 確認 PTT 帳號密碼是否正確
    - 檢查網路連線狀態
-   - 查看程式日誌檔案
+   - 查看程式日誌：`docker logs ptt-auto-sign`
 
 3. Telegram 通知未收到
    - 確認 bot_token 是否有效
@@ -295,19 +292,19 @@ poetry run flake8 src/
 
 ## 📊 專案統計
 
-- **目前版本**：1.4.1
-- **Python 版本**：3.14+
+- **目前版本**：請見 [GitHub Releases](https://github.com/crazycat836/PTT-Auto-Sign/releases) 與 [CHANGELOG.md](CHANGELOG.md)
+- **Python 版本**：3.11+
 - **依賴管理**：使用 Poetry
 - **Docker 映像**：`crazycat836/pttautosign:latest`
 - **架構設計**：模組化、依賴注入設計
-- **測試覆蓋**：使用 `--test-login` 進行完整測試
+- **測試**：`pytest` 單元測試（執行 `poetry run pytest`）；`--test-login` 會實際登入 PTT 一次，確認整個流程能跑通
 - **文件語言**：雙語（英文/繁體中文）
 
 ## 🔗 相關連結
 
 - [Docker Hub 儲存庫](https://hub.docker.com/r/crazycat836/pttautosign)
-- [GitHub Issues](https://github.com/crazycat836/PTTAutoSign/issues)
-- [發布說明](https://github.com/crazycat836/PTTAutoSign/releases)
+- [GitHub Issues](https://github.com/crazycat836/PTT-Auto-Sign/issues)
+- [發布說明](https://github.com/crazycat836/PTT-Auto-Sign/releases)
 - [更新日誌](CHANGELOG.md)
 
 ## 📝 更新日誌
