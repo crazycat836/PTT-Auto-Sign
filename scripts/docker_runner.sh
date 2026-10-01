@@ -124,8 +124,10 @@ run_ptt_login() {
     fi
 
     # 提取登入統計
-    successful_logins=$(echo "$output" | grep -o "登入成功：[0-9]*" | grep -o "[0-9]*" || echo "0")
-    failed_logins=$(echo "$output" | grep -o "登入失敗：[0-9]*" | grep -o "[0-9]*" || echo "0")
+    # 數字樣式要寫 [0-9][0-9]*（至少一位）。寫成 [0-9]* 的話，alpine 的 busybox grep -o
+    # 會比對到行首的空字串而什麼都不印，狀態碼卻仍是 0，|| echo "0" 不會觸發，統計就成了空值。
+    successful_logins=$(echo "$output" | grep -o "登入成功：[0-9][0-9]*" | grep -o "[0-9][0-9]*" || echo "0")
+    failed_logins=$(echo "$output" | grep -o "登入失敗：[0-9][0-9]*" | grep -o "[0-9][0-9]*" || echo "0")
     total_accounts=$((successful_logins + failed_logins))
 
     # 顯示結果摘要
