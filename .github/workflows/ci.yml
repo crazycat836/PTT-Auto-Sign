@@ -24,7 +24,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # 固定 Poetry 版本：不鎖的話 Poetry 自己出新版就可能讓 CI 無預警壞掉，
-      # 那也是「套件問題」的一種來源。
+      # 那也是「套件問題」的一種來源。Dockerfile 的 builder 階段用同一版匯出
+      # lock，要升級時兩邊一起改。
       - name: Install Poetry
         run: pipx install poetry==2.4.1
 
