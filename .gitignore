@@ -39,7 +39,6 @@ execution_count
 
 # Docker
 *.tar
-.dockerignore
 
 # 測試與工具產物
 .coverage
@@ -50,3 +49,7 @@ htmlcov/
 
 # 文檔
 architecture_improvements.md
+
+# Agent instructions (local only)
+/AGENTS.md
+/CLAUDE.md
