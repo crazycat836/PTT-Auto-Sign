@@ -9,7 +9,8 @@
 # 模式：
 #   - 測試模式 (TEST_MODE=true)：每分鐘執行一次，共 3 次後結束容器。
 #   - 生產模式 + 每日隨機時間 (RANDOM_DAILY_TIME=true)：每天於 9-17 點的
-#     隨機時間執行一次，並在每次排程更新時發送 Telegram 通知。
+#     隨機時間執行一次，並在每次排程更新時發送 Telegram 通知
+#     （DISABLE_NOTIFICATIONS=true 時不發送）。
 #   - 生產模式 + 固定時間 (RANDOM_DAILY_TIME=false)：啟動時抽一次隨機時間，
 #     之後每天於該固定時間執行。
 
@@ -98,13 +99,14 @@ run_ptt_login() {
         return 1
     fi
 
-    # 設置通知功能
+    # 設置通知功能：沿用使用者的 DISABLE_NOTIFICATIONS；
+    # send_notification=false 只對這次執行暫時停用，不覆寫使用者的設定。
+    local disable_notifications=${DISABLE_NOTIFICATIONS:-false}
     if [ "$send_notification" = "false" ]; then
         log_debug "已暫時停用通知功能（用於測試）"
-        export DISABLE_NOTIFICATIONS=true
+        disable_notifications=true
     else
-        log_debug "已啟用通知功能"
-        unset DISABLE_NOTIFICATIONS
+        log_debug "通知功能依使用者設定（DISABLE_NOTIFICATIONS=${disable_notifications}）"
     fi
 
     # 執行 PTT 自動簽到程式
@@ -112,7 +114,7 @@ run_ptt_login() {
     local status
 
     log_debug "執行命令: $PYTHON_PATH -m pttautosign.main --test-login"
-    output=$($PYTHON_PATH -m pttautosign.main --test-login 2>&1)
+    output=$(DISABLE_NOTIFICATIONS=$disable_notifications $PYTHON_PATH -m pttautosign.main --test-login 2>&1)
     status=$?
 
     # 顯示程式輸出
@@ -196,6 +198,8 @@ seconds_until() {
 notify_schedule_update() {
     local hour=$1 minute=$2
 
+    # 使用者停用通知時不發送（與 config.py 相同：不分大小寫，值為 true 才算停用）。
+    [ "${DISABLE_NOTIFICATIONS,,}" = "true" ] && return 0
     [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || return 0
 
     export NEW_HOUR="$hour"
