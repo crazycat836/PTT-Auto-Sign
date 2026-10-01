@@ -1,0 +1,26 @@
+# 排除不該或不必送進 build context 的東西：憑證、版控資料、快取與測試產物、大型檔案。
+# Dockerfile 會 COPY pyproject.toml、README.md、src/、scripts/，這幾個不可排除
+# （README.md 是 pyproject 的 readme 欄位指向的檔案，builder 階段 `pip install .` 會讀）。
+
+# 憑證（.env.* 也會排除 .env.example，image 用不到）
+**/.env
+**/.env.*
+
+# 版控與本機 agent 設定（.claude/ 底下有整份 repo 的 worktree，可能各自帶 .env）
+.git
+.claude
+
+# Python 快取與測試產物
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.coverage
+.coverage.*
+htmlcov
+
+# 虛擬環境
+.venv
+venv
+
+# docker save 匯出的 image 檔
+*.tar

@@ -39,7 +39,6 @@ execution_count
 
 # Docker
 *.tar
-.dockerignore
 
 # 測試與工具產物
 .coverage
