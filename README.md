@@ -46,10 +46,10 @@ Docker is the preferred and recommended method for both testing and production d
      -e TELEGRAM_CHAT_ID=your_chat_id \
      crazycat836/pttautosign:latest
      
-   # Option 2: Using Test Mode (runs every minute, 3 times total)
+   # Option 2: Using Test Mode (runs every minute, 3 times total, then the container exits)
+   # No --restart here: a restart policy would start the container again and repeat the test runs
    docker run -d \
      --name ptt-auto-sign-test \
-     --restart unless-stopped \
      -e PTT_USERNAME=your_username \
      -e PTT_PASSWORD=your_password \
      -e TELEGRAM_BOT_TOKEN=your_bot_token \
@@ -66,9 +66,9 @@ The container supports two operation modes:
 2. **Test Mode**: Container runs every minute for 3 times, useful for testing your setup.
 
 In either mode, the container will:
-1. **Verify credentials** by performing an initial login test and notification before setting up the cron job
-2. **Set up a cron job** based on the selected mode
-3. **Keep running** to monitor and execute the scheduled tasks
+1. **Verify credentials** by running one login test before scheduling anything (Telegram notifications are disabled for this test)
+2. **Schedule the runs**: `scripts/docker_runner.sh` works out the next run time for the selected mode and sleeps until then (the image has no cron)
+3. **Keep running** in production mode; in test mode the container exits after the 3 runs
 
 To view container logs:
 ```bash
@@ -83,7 +83,7 @@ Docker is the recommended deployment method for PTT Auto Sign, as it:
 
 - Ensures consistent execution environment across different systems
 - Handles all dependencies and Python version requirements
-- Provides built-in scheduling through the container's cron system
+- Provides built-in scheduling through `scripts/docker_runner.sh` (no cron needed)
 - Makes updates simple with just a container restart
 - Offers easy parameter configuration through environment variables
 
@@ -189,7 +189,7 @@ Local development is primarily for contributors and developers. For regular usag
 - ERROR: Error messages
 - DEBUG: Debug information (when DEBUG_MODE=true)
 
-All logs are output to the console in colorized format. Log messages are localized in Chinese for better readability.
+All logs are output to the console in colorized format. Log messages are localized in Chinese for better readability. No log files are written locally.
 
 ## 🛠️ Development
 
@@ -202,8 +202,8 @@ All logs are output to the console in colorized format. Log messages are localiz
 
 2. **Clone and Setup**:
    ```bash
-   git clone https://github.com/crazycat836/PTTAutoSign.git
-   cd PTTAutoSign
+   git clone https://github.com/crazycat836/PTT-Auto-Sign.git
+   cd PTT-Auto-Sign
    poetry install
    ```
 
@@ -267,7 +267,7 @@ poetry run pytest --cov=pttautosign --cov-report=term-missing
 2. Sign-in Failure
    - Verify PTT account credentials
    - Check network connectivity
-   - Review application logs
+   - Review application logs: `docker logs ptt-auto-sign`
 
 3. Telegram Notifications Not Received
    - Verify bot_token is valid
@@ -290,7 +290,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 📊 Project Statistics
 
-- **Current Version**: 1.3.5
+- **Current Version**: see [GitHub Releases](https://github.com/crazycat836/PTT-Auto-Sign/releases) and [CHANGELOG.md](CHANGELOG.md)
 - **Python Version**: 3.11+
 - **Dependencies**: Managed with Poetry
 - **Docker Image**: `crazycat836/pttautosign:latest`
@@ -301,6 +301,6 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ## 🔗 Related Links
 
 - [Docker Hub Repository](https://hub.docker.com/r/crazycat836/pttautosign)
-- [GitHub Issues](https://github.com/crazycat836/PTTAutoSign/issues)
-- [Release Notes](https://github.com/crazycat836/PTTAutoSign/releases)
+- [GitHub Issues](https://github.com/crazycat836/PTT-Auto-Sign/issues)
+- [Release Notes](https://github.com/crazycat836/PTT-Auto-Sign/releases)
 - [Change Log](CHANGELOG.md)
