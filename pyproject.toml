@@ -3,7 +3,7 @@
 # worth reading -- `poetry check --lock` output, for one.
 [project]
 name = "pttautosign"
-version = "1.4.0"
+version = "1.4.1"
 description = "PTT Auto Sign - Automatically sign in to PTT BBS"
 authors = [{name = "CrazyCat", email = "crazycat836@gmail.com"}]
 readme = "README.md"
