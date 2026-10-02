@@ -24,7 +24,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       # 固定 Poetry 版本：不鎖的話 Poetry 自己出新版就可能讓 CI 無預警壞掉，
-      # 那也是「套件問題」的一種來源。
+      # 那也是「套件問題」的一種來源。Dockerfile 的 builder 階段用同一版匯出
+      # lock，要升級時兩邊一起改。
       - name: Install Poetry
         run: pipx install poetry==2.4.1
 
@@ -57,19 +58,38 @@ jobs:
           print("執行期未載入 setuptools / pkg_resources")
           PY
 
+  # 用正式的 Dockerfile 實際 build 一次 image 並驗證內容。正式環境跑的是
+  # image，不是上面的 virtualenv：相依套件在 alpine 上裝不起來、image 內容
+  # 跟 poetry.lock 對不上、entrypoint 壞掉，test job 都看不到。
+  # 這個 job 列在 ci-ok 底下，Dependabot 的 PR 要 image 也過了才會自動合併。
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # 平台寫死 amd64：正式環境是 Synology DS923+（amd64）。
+      - name: Build image
+        run: docker build --platform linux/amd64 -t pttautosign:ci .
+
+      - name: Verify image
+        run: bash .github/scripts/verify_image.sh pttautosign:ci
+
   # 單一匯總 check，給 auto-merge 當閘門用。
   # matrix 會把 check 名稱變成 "test (py3.11)"…，數量還會隨 matrix 增減而變動；
   # auto-merge 去盯一個會改名的 check 很容易變成盯空。這個 job 的名字固定叫
-  # ci-ok，只要有任何一個 matrix 沒過就跟著失敗。
+  # ci-ok，只要有任何一個 matrix 或 docker build 沒過就跟著失敗。
   ci-ok:
     name: ci-ok
     if: always()
-    needs: test
+    needs: [test, docker]
     runs-on: ubuntu-latest
     steps:
-      - name: Check matrix result
+      - name: Check results
         run: |
-          echo "test matrix result: $RESULT"
-          [ "$RESULT" = "success" ] || exit 1
+          echo "test matrix result: $TEST_RESULT"
+          echo "docker build result: $DOCKER_RESULT"
+          [ "$TEST_RESULT" = "success" ] && [ "$DOCKER_RESULT" = "success" ] || exit 1
         env:
-          RESULT: ${{ needs.test.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          DOCKER_RESULT: ${{ needs.docker.result }}

@@ -1,0 +1,110 @@
+name: Docker publish
+
+# 把 image build 好、驗證過，再推上 Docker Hub。
+#
+# 觸發方式：
+#   - main 上有會影響 image 內容的變更（push）
+#   - Dependabot 的 pip / docker 更新被自動合併後，由 dependabot-auto-merge.yml
+#     主動觸發。那邊用 GITHUB_TOKEN 合併，GitHub 不會因此再觸發 push 事件，
+#     只靠下面的 push 觸發的話，Dependabot 修的資安更新永遠不會進到 image。
+#   - 手動：Actions 頁面的 Run workflow
+#
+# 事先要在 repo 的 Settings → Secrets and variables → Actions 設定：
+#   - DOCKERHUB_USERNAME：Docker Hub 帳號
+#   - DOCKERHUB_TOKEN：Docker Hub 的 Personal access token（要有 Read & Write 權限）
+#
+# 推上去的 tag：
+#   - latest：NAS 上跑的就是這個
+#   - pyproject 的版本號（例如 1.4.0）：同一版之後若只更新相依套件，會被覆蓋
+#   - sha-<commit 前 7 碼>：不會被覆蓋，要退回先前的 image 時用它
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "poetry.lock"
+      - "src/**"
+      - "scripts/**"
+      - ".github/scripts/verify_image.sh"
+      - ".github/workflows/docker-publish.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 連續合併時讓發布排隊依序跑，避免較舊的 commit 晚一步推完、把 latest 蓋回舊版。
+concurrency:
+  group: docker-publish
+  cancel-in-progress: false
+
+env:
+  IMAGE: crazycat836/pttautosign
+
+jobs:
+  publish:
+    # 手動觸發時可以選別的分支，但 latest 只能來自 main。
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # 先檢查憑證，沒設定就在第一步失敗並講清楚缺什麼，不要 build 完才在登入時失敗。
+      - name: Check Docker Hub credentials
+        run: |
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::error::尚未設定 DOCKERHUB_USERNAME 或 DOCKERHUB_TOKEN（Settings → Secrets and variables → Actions）"
+            exit 1
+          fi
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Read version from pyproject
+        id: meta
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "版本：$version，commit：${GITHUB_SHA::7}"
+
+      # 平台寫死 amd64：正式環境是 Synology DS923+（amd64）。
+      - name: Build image
+        run: |
+          docker build --platform linux/amd64 \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            -t "$IMAGE:sha-$SHORT_SHA" \
+            -t "$IMAGE:$VERSION" \
+            -t "$IMAGE:latest" \
+            .
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
+
+      # 與 PR 上 CI 跑的是同一支驗證；沒過就不推。
+      - name: Verify image
+        run: bash .github/scripts/verify_image.sh "$IMAGE:sha-$SHORT_SHA"
+        env:
+          SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
+
+      - name: Log in to Docker Hub
+        run: echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # latest 最後推：中途失敗的話，NAS 拉到的仍是上一版完整的 image。
+      - name: Push image
+        run: |
+          for tag in "sha-$SHORT_SHA" "$VERSION" latest; do
+            docker push "$IMAGE:$tag"
+          done
+          echo "已推上 $IMAGE：sha-$SHORT_SHA、$VERSION、latest" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          SHORT_SHA: ${{ steps.meta.outputs.short_sha }}
+
+      - name: Log out of Docker Hub
+        if: always()
+        run: docker logout

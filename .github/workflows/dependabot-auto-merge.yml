@@ -6,6 +6,7 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
+  actions: write  # 合併後觸發 docker-publish.yml
 
 jobs:
   auto-merge:
@@ -83,4 +84,17 @@ jobs:
         run: gh pr merge --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 上一步用 GITHUB_TOKEN 合併，GitHub 不會因此觸發 main 的 push 事件（為了
+      # 避免 workflow 互相連鎖觸發），docker-publish.yml 的 push 觸發等於收不到。
+      # workflow_dispatch 是例外，所以在這裡主動觸發發布。
+      # 只有 pip 與 docker 的更新會改變 image 內容；GitHub Actions 的更新不會。
+      - name: Trigger image publish
+        if: >-
+          steps.decide.outputs.merge == 'true' &&
+          (steps.metadata.outputs.package-ecosystem == 'pip' ||
+           steps.metadata.outputs.package-ecosystem == 'docker')
+        run: gh workflow run docker-publish.yml --ref main --repo "$GITHUB_REPOSITORY"
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

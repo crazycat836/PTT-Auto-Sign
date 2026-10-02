@@ -1,7 +1,8 @@
 # 排除不該或不必送進 build context 的東西：憑證、版控資料、快取與建置產物、
 # 編輯器與系統檔、執行期用不到的文件、大型檔案。
-# Dockerfile 會 COPY pyproject.toml、README.md、src/、scripts/，這幾個不可排除
-# （README.md 是 pyproject 的 readme 欄位指向的檔案，builder 階段 `pip install .` 會讀）。
+# Dockerfile 會 COPY pyproject.toml、poetry.lock、README.md、src/、scripts/，這幾個不可排除
+# （poetry.lock 是 builder 階段匯出執行期相依的來源；README.md 是 pyproject 的 readme
+# 欄位指向的檔案，builder 階段安裝本專案時會讀）。
 
 # 憑證（.env.* 也會排除 .env.example，image 用不到）
 **/.env
