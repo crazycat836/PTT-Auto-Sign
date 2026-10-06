@@ -129,6 +129,16 @@ run_ptt_login() {
         echo "$output"
     else
         log_message "PTT 程式執行完成，狀態碼: $status"
+        # 沒開 DEBUG_MODE 也要印出警告與錯誤，否則 log 只看得到「失敗」，看不到原因。
+        local problems
+        problems=$(printf '%s\n' "$output" | grep -E "WARNING|ERROR|CRITICAL")
+        if [ -n "$problems" ]; then
+            printf '%s\n' "$problems"
+        elif [ $status -ne 0 ]; then
+            # 程式在寫 log 之前就掛掉（例如 import 失敗），只有 traceback，印最後 20 行。
+            log_message "PTT 程式異常結束，最後輸出:"
+            printf '%s\n' "$output" | tail -n 20
+        fi
     fi
 
     # 提取登入統計
@@ -165,7 +175,8 @@ verify_credentials() {
         log_message "✅ 驗證成功！PTT 登入憑證有效"
         return 0
     else
-        log_message "❌ 驗證失敗！請檢查您的 PTT 帳號密碼"
+        # 失敗不一定是帳密錯誤（PTT 改版、斷線也會），原因看上面印出的錯誤。
+        log_message "❌ 驗證失敗！PTT 登入沒有成功，原因見上方的錯誤訊息"
         return 1
     fi
 }

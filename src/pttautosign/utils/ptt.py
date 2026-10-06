@@ -143,7 +143,10 @@ class PTTAutoSign(LoginService):
                 # Known auth/PTT errors — log message only, not the full
                 # traceback (avoid leaking sensitive frame locals into logs).
                 error_message = self._format_error_message(ptt_id, e)
-                self.logger.error(f"帳號 {ptt_id} 登入失敗：{error_message}")
+                # 換行是給 Telegram 排版用的；log 要維持一行，docker_runner.sh
+                # 擷取錯誤時才不會只拿到前半句。
+                one_line_message = error_message.replace("\n", "")
+                self.logger.error(f"帳號 {ptt_id} 登入失敗：{one_line_message}")
 
                 # Retry for temporary errors, with a capped exponential backoff.
                 if isinstance(e, (PTT_exceptions.LoginTooOften, PTT_exceptions.UseTooManyResources)) and attempt < self.max_retries:

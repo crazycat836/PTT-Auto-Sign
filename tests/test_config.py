@@ -71,7 +71,7 @@ class TestPTTConfig:
         PTTConfig().validate()
 
     def test_error_messages_populated(self):
-        assert len(PTTConfig().error_messages) == 6
+        assert len(PTTConfig().error_messages) == 8
 
     @pytest.mark.parametrize("hours", [-13, 15])
     def test_timezone_out_of_range_raises(self, hours):

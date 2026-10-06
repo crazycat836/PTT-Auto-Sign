@@ -64,6 +64,21 @@ class TestFormatErrorMessage:
         msg = signer._format_error_message("alice", _exc(PTT_exceptions.UnregisteredUser))
         assert msg.startswith("❌ alice")
 
+    def test_login_error_explains_main_menu_not_reached(self, notifier):
+        # LoginError means PyPtt never recognised the main menu after sending
+        # the password; PyPtt's own text is just 「登入失敗」, which reads like a
+        # credentials problem.
+        signer = PTTAutoSign(notifier)
+        msg = signer._format_error_message("u", _exc(PTT_exceptions.LoginError, "登入失敗"))
+        assert "主選單" in msg
+        assert "未知錯誤" not in msg
+
+    def test_connection_closed_says_ptt_dropped_the_connection(self, notifier):
+        signer = PTTAutoSign(notifier)
+        msg = signer._format_error_message("u", _exc(PTT_exceptions.ConnectionClosed, "連線已經被關閉"))
+        assert "中斷" in msg
+        assert "未知錯誤" not in msg
+
 
 class TestLogin:
     def _signer(self, notifier, **cfg):
@@ -86,6 +101,20 @@ class TestLogin:
         signer = self._signer(notifier)
         assert signer.login("alice", "bad") is False
         assert api.login.call_count == 1
+
+    @patch("pttautosign.utils.ptt.PTT")
+    def test_failure_reason_is_logged_on_one_line(self, mock_ptt, notifier, caplog):
+        # docker_runner.sh copies the ERROR lines into the container log; a
+        # message split over two lines would lose its second half, which is
+        # the part that says what went wrong (e.g. 「帳號或密碼錯誤」).
+        api = mock_ptt.API.return_value
+        api.login.side_effect = _exc(PTT_exceptions.WrongIDorPassword)
+        signer = self._signer(notifier)
+        with caplog.at_level("ERROR", logger="pttautosign.utils.ptt"):
+            assert signer.login("alice", "bad") is False
+        reasons = [r.getMessage() for r in caplog.records if "帳號或密碼錯誤" in r.getMessage()]
+        assert reasons, caplog.text
+        assert all("\n" not in m for m in reasons)
 
     @patch("pttautosign.utils.ptt.time.sleep")
     @patch("pttautosign.utils.ptt.PTT")
