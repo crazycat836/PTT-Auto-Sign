@@ -136,7 +136,12 @@ class PTTConfig:
                 PTT_exceptions.WrongPassword: "PTT 登入失敗！\n密碼錯誤",
                 PTT_exceptions.LoginTooOften: "PTT 登入失敗！\n登入次數過於頻繁",
                 PTT_exceptions.UseTooManyResources: "PTT 登入失敗！\n系統資源使用過多",
-                PTT_exceptions.UnregisteredUser: "未註冊的使用者"
+                PTT_exceptions.UnregisteredUser: "未註冊的使用者",
+                # PyPtt 對這兩個只說「登入失敗」「連線已經被關閉」，看起來像帳密問題。
+                # 帳密錯誤會是上面的 WrongIDorPassword；LoginError 是送出密碼後
+                # 認不出主選單，2026-10-04 PTT 改版狀態列時就是這樣。
+                PTT_exceptions.LoginError: "PTT 登入失敗！\n登入後沒有回到主選單，可能是 PTT 畫面改版，程式需要更新",
+                PTT_exceptions.ConnectionClosed: "PTT 登入失敗！\n登入過程中連線被 PTT 中斷",
             }
     
     def validate(self) -> None:

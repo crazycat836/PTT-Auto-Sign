@@ -149,29 +149,37 @@ class PyPttPatcher:
         screens.get_data = patched_get_data
 
     def _patch_mainmenu_detection(self, screens) -> None:
-        """Drop the brittle '[呼叫器]' marker from PyPtt's main-menu detection.
+        """Detect PyPtt's main menu by its title, not by footer text.
 
         ``login()`` only succeeds if every string in ``screens.Target.MainMenu``
-        is present on the final screen. ``[呼叫器]`` is PTT's default corner
-        display, but it is a per-account preference: an account that has
-        switched the corner to a date/時辰 display (toggled from within PTT)
-        never shows that marker again, so a real, successful login is
-        misreported as ``LoginError`` on every single attempt. The other two
-        markers (the (G)oodbye menu item and the online-count footer) are already
-        unique to the main menu on their own.
+        is present on the final screen. PyPtt checks two footer markers, and
+        neither is reliable:
 
-        Match on the substring, not the exact string: PyPtt spells this marker
-        differently across versions -- '[呼叫器]' in 1.3.3, '呼叫器' in 2.3.7.
-        An exact-match removal silently does nothing on a version it does not
-        know about, which brings the false-negative login back with no visible
-        error: the worst possible failure mode for this particular patch.
+        - ``呼叫器`` is a per-account preference: an account that has switched
+          the corner to a date/時辰 display never shows it.
+        - PTT1's 2026-10-04 footer redesign removed both ``我是`` and
+          ``呼叫器`` for everyone (PttCurrent M.1789902495.A.1C6). Without them,
+          login() never sees the main menu, keeps pressing ← to "go back" to
+          it, ends up at (G)oodbye, and PTT drops the connection.
+
+        Replace them with ``【主功能表】``, the row-0 title PTT keeps fixed so
+        clients can detect the main menu. Together with the (G)oodbye item it
+        matches the main menu in both the old and the new layout.
+
+        Match on the substring, not the exact string: PyPtt spells these
+        markers differently across versions -- '[呼叫器]' / '人, 我是' in 1.3.3,
+        '呼叫器' / '我是' in 2.3.7. An exact-match removal silently does nothing
+        on a version it does not know about, which brings the failed login back
+        with no visible error: the worst possible failure mode for this patch.
 
         Mutate the list in place; PyPtt holds its own reference to it.
         """
         menu = screens.Target.MainMenu
-        for marker in [m for m in menu if "呼叫器" in m]:
+        for marker in [m for m in menu if "呼叫器" in m or "我是" in m]:
             menu.remove(marker)
             logger.debug("Removed unreliable main-menu marker: %r", marker)
+        if "【主功能表】" not in menu:
+            menu.append("【主功能表】")
 
 
 def apply_patches() -> bool:
