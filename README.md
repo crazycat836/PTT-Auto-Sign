@@ -66,7 +66,7 @@ The container supports two operation modes:
 2. **Test Mode**: Container runs every minute for 3 times, useful for testing your setup.
 
 In either mode, the container will:
-1. **Verify credentials** by running one login test before scheduling anything (Telegram notifications are disabled for this test)
+1. **Verify credentials** by running one login test before scheduling anything (no Telegram notification when it succeeds). If it fails, test mode exits; production mode sends a Telegram notification and keeps running, logging in again at the next scheduled time, so a restart policy cannot turn the failure into back-to-back logins
 2. **Schedule the runs**: `scripts/docker_runner.sh` works out the next run time for the selected mode and sleeps until then (the image has no cron)
 3. **Keep running** in production mode; in test mode the container exits after the 3 runs
 

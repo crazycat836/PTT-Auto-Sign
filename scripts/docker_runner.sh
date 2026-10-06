@@ -13,6 +13,9 @@
 #     （DISABLE_NOTIFICATIONS=true 時不發）。
 #   - 生產模式 + 固定時間 (RANDOM_DAILY_TIME=false)：啟動時抽一次隨機時間，
 #     之後每天於該固定時間執行。
+#
+# 啟動時先登入一次驗證憑證。驗證失敗時，測試模式直接結束；生產模式不結束，
+# 發 Telegram 通知後照常進入排程，下一次排程時間再登入。
 
 # 初始化環境變數（使用默認值，若未設置）
 export TEST_MODE=${TEST_MODE:-false}
@@ -253,6 +256,42 @@ PYTHON
     return 0
 }
 
+# 生產模式驗證憑證失敗時透過 Telegram 通知。容器不會結束，從外面看一切正常，
+# 不通知的話使用者不會知道簽到在失敗。
+notify_verify_failure() {
+    [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] || return 0
+    if [ "$USER_DISABLE_NOTIFICATIONS" = "true" ]; then
+        log_debug "已停用通知（DISABLE_NOTIFICATIONS=true），略過驗證失敗通知"
+        return 0
+    fi
+
+    cd /app && python - <<'PYTHON'
+import os
+import sys
+from datetime import datetime
+
+from pttautosign.utils.config import TelegramConfig
+from pttautosign.utils.telegram import TelegramBot
+
+message = (
+    "❌ PTT 自動簽到：容器啟動時登入失敗\n\n"
+    "容器不會結束，下一次排程時間會再登入一次。\n"
+    "失敗原因請看容器 log。\n"
+    f"#ptt #{datetime.now():%Y%m%d}"
+)
+
+config = TelegramConfig(token=os.environ["TELEGRAM_BOT_TOKEN"], chat_id=os.environ["TELEGRAM_CHAT_ID"])
+bot = TelegramBot(config)
+sys.exit(0 if bot.send_message(message) else 1)
+PYTHON
+    local result=$?
+
+    if [ $result -ne 0 ]; then
+        log_message "⚠️ 驗證失敗通知發送失敗"
+    fi
+    return 0
+}
+
 # 等待中的背景 sleep 的 PID，收到停止訊號時由 handle_stop_signal 收掉。
 SLEEP_PID=""
 
@@ -410,8 +449,17 @@ main() {
     # 驗證 PTT 憑證
     log_message "正在驗證 PTT 登入憑證..."
     if ! verify_credentials; then
-        log_message "憑證驗證失敗，程式即將退出"
-        exit 1
+        # 測試模式跑完本來就會結束，README 也要求不要設自動重啟，失敗就直接結束。
+        if [ "$TEST_MODE" = "true" ]; then
+            log_message "憑證驗證失敗，程式即將退出"
+            exit 1
+        fi
+        # 生產模式不結束：README 範例設了 --restart unless-stopped／always，
+        # 容器一結束 Docker 就重開、重新驗證。每輪跑超過 10 秒，Docker 會把
+        # 重啟間隔重設回 100 毫秒，結果是約 13 秒登入 PTT 一次；短時間內
+        # 連續登入可能被 PTT 判定為機器人而暫時封鎖帳號。
+        log_message "憑證驗證失敗，容器不會結束，下一次排程時間再登入"
+        notify_verify_failure
     fi
 
     # 進入排程器（依模式持續運行或在測試完成後結束）
