@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.2
+- **Bug fix – PTT 改版後登入一律失敗**: PTT1 在 2026-10-04 改版主選單最底下一列的狀態列，拿掉「我是」與「呼叫器」（PttCurrent M.1789902495.A.1C6）。PyPtt 2.3.9 要在畫面上同時看到「離開，再見」與「我是」才認定回到主選單，改版後 `login()` 一直認不出主選單，連續送 ← 想回去，最後按到 (G)oodbye，PTT 斷線。帳密是對的，PTT 端已顯示「密碼正確」。`pyptt_patch.py` 的主選單判定拿掉「我是」與「呼叫器」，加上 PTT 公告保證不變的頂端標題「【主功能表】」，與「離開，再見」一起判斷，新舊兩種狀態列都比對得到。PyPtt 上游最新版仍是 2.3.9，還沒跟上這次改版。
+- **Bug fix – 登入失敗時 log 看不到原因**: 沒開 `DEBUG_MODE` 時，`docker_runner.sh` 不印 Python 的輸出，登入失敗只剩「❌ 驗證失敗！請檢查您的 PTT 帳號密碼」，上一條的斷線因此看起來像密碼錯誤。`docker_runner.sh` 不論是否開 `DEBUG_MODE` 都印出 Python 的 WARNING／ERROR 行，程式在寫 log 前就掛掉時印最後 20 行輸出；驗證失敗的結論改為「PTT 登入沒有成功，原因見上方的錯誤訊息」。`LoginError`、`ConnectionClosed` 加上中文說明（PyPtt 原文只有「登入失敗」「連線已經被關閉」，分不出是不是帳密問題），Telegram 通知用同一段文字；寫進 log 時拿掉給 Telegram 排版用的換行，runner 擷取時才不會只拿到「PTT 登入失敗！」前半句。
+- **Bug fix – 驗證失敗時容器不斷重開、連續登入 PTT**: 憑證驗證失敗時 `docker_runner.sh` 以錯誤碼 1 結束，README 範例設了 `--restart unless-stopped`／`always`，Docker 隨即重開容器、重新驗證。容器每輪跑超過 10 秒，Docker 會把重啟間隔重設回 100 毫秒，2026-10-06 實際約 13 秒登入 PTT 一次，短時間內連續登入可能被 PTT 判定為機器人而暫時封鎖帳號。生產模式驗證失敗時不結束：發一則 Telegram 通知（`DISABLE_NOTIFICATIONS=true` 時不發），照常進入排程，下一次排程時間再登入。測試模式與缺少環境變數時照舊以錯誤碼 1 結束。README 中英文版的啟動流程說明同步更新。
+- **Dependency – python-dotenv 1.2.3 → 1.2.4**
+- 驗證：用真帳號跑 `python -m pttautosign.main --test-login`（關閉 Telegram 通知、不踢其他連線），登入成功 1、失敗 0，`get_user` 回傳登入次數與信箱狀態。用假的 python 與 Telegram 跑 `docker_runner.sh`：斷線、帳密錯誤、import 失敗三種情況的 log 都印出原因；生產模式驗證失敗時容器不結束，送出一則失敗通知後進入排程，關閉通知時不發；測試模式驗證失敗與缺少環境變數時以錯誤碼 1 結束。CI 在 alpine image 裡只跑到缺少環境變數的情況。**尚未在 NAS 上用新 image 實測**。
+
 ## v1.4.1
 - **Bug fix – 容器不理會 `DISABLE_NOTIFICATIONS`**: v1.4.0 的 `docker_runner.sh` 在每次排程（測試模式、固定時間、每日隨機時間）與 `--run-ptt-login` 執行前都會 `unset DISABLE_NOTIFICATIONS`，用 `-e DISABLE_NOTIFICATIONS=true` 啟動的容器照樣收到每一則登入通知；`notify_schedule_update()` 送排程通知時也不看這個變數。腳本啟動時把使用者的值轉成小寫，存成 `USER_DISABLE_NOTIFICATIONS`（與 `config.py` 的 `.lower() == "true"` 一致），排程執行時還原成這個值。排程通知看的也是它，不看驗證憑證時暫時設成 `true` 的 `DISABLE_NOTIFICATIONS`。
 - **Bug fix – 等待中 `docker stop` 要等 10 秒**: 排程器用前景 `sleep` 等下次簽到，bash 要等前景指令結束才執行 trap，所以等待中 `docker stop` 會等滿 10 秒後被 SIGKILL，結束碼 137。等待改用背景 `sleep` 加 `wait`，收到停止訊號時先停掉背景的 `sleep`，再以結束碼 0 結束。
