@@ -17,14 +17,22 @@ updates:
       - "dependencies"
       - "python"
     groups:
-      # 兩個分類，讓一週最多兩張 PR：執行期一張、開發工具一張。
-      # 不再排除 major——每週跟上小版本，才不會等到 CVE 出現時被迫一次跳好幾個大版本。
-      production:
-        dependency-type: "production"
+      # 執行期與開發工具的小版本合成一張 PR。分成兩張時兩張都改 poetry.lock，
+      # 先合併的那張會讓另一張衝突、要等 dependabot rebase 才合得進去。
+      #
+      # 大版本不放進來，各自開 PR：dependabot-auto-merge.yml 會把執行期套件的
+      # 大版本留給人工審查，混在同一張 PR 裡會連小版本一起卡住。
+      # 不排除 major——每週跟上，才不會等到 CVE 出現時被迫一次跳好幾個大版本。
+      python:
+        applies-to: version-updates
         patterns:
           - "*"
-      development:
-        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      # 資安修正（多半是 certifi 這類間接相依）不受上面的分類管，另外收成一張。
+      python-security:
+        applies-to: security-updates
         patterns:
           - "*"
 
