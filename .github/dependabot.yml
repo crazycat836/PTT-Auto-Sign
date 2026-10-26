@@ -31,10 +31,14 @@ updates:
           - "minor"
           - "patch"
       # 資安修正（多半是 certifi 這類間接相依）不受上面的分類管，另外收成一張。
+      # 大版本一樣不放進來，理由同上。
       python-security:
         applies-to: security-updates
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # -------------------------------------------------------- GitHub Actions
   - package-ecosystem: "github-actions"
