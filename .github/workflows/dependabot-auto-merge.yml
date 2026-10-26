@@ -27,20 +27,24 @@ jobs:
       # 注意 ecosystem 這個條件不能省：Actions 的相依也被歸類成
       # direct:production，只看 dependency-type 會把 checkout v4→v5 這種
       # CI 已經驗過的升級一起擋掉。
+      #
+      # 逐個套件檢查 updated-dependencies-json，不看 update-type／dependency-type：
+      # 分類 PR 有多個套件時，這兩個輸出不一定對應到同一個套件，執行期的大版本
+      # 可能被開發工具的類型蓋過而漏掉審查。
       - name: Decide whether this PR may auto-merge
         id: decide
         run: |
-          if [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
-            echo "merge=true" >> "$GITHUB_OUTPUT"
-          elif [ "$ECOSYSTEM" = "pip" ] && [ "$DEP_TYPE" = "direct:production" ]; then
+          majors=$(jq -r '[.[] | select(.updateType == "version-update:semver-major"
+                                         and .dependencyType == "direct:production")
+                                | .dependencyName] | join(", ")' <<< "$DEPS")
+          if [ "$ECOSYSTEM" = "pip" ] && [ -n "$majors" ]; then
             echo "merge=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Python 執行期相依的大版本升級，保留給人工審查。"
+            echo "::notice::Python 執行期相依的大版本升級（$majors），保留給人工審查。"
           else
             echo "merge=true" >> "$GITHUB_OUTPUT"
           fi
         env:
-          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
-          DEP_TYPE: ${{ steps.metadata.outputs.dependency-type }}
+          DEPS: ${{ steps.metadata.outputs.updated-dependencies-json }}
           ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
 
       # 這個 repo 沒有設必要狀態檢查，`gh pr merge --auto` 會在 CI 還沒回報前
