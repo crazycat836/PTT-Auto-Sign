@@ -553,14 +553,14 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pyptt"
-version = "2.3.14"
+version = "2.3.16"
 description = "PyPtt github: https://github.com/PyPtt/PyPtt"
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "pyptt-2.3.14-py3-none-any.whl", hash = "sha256:4f2d793c7db9e7c2528b2f6b964c68b55b8b633302316a5087d3998a90bab467"},
-    {file = "pyptt-2.3.14.tar.gz", hash = "sha256:512b4c53146b190ee806548096ea96de4ebe7907747bea572846df379235298f"},
+    {file = "pyptt-2.3.16-py3-none-any.whl", hash = "sha256:2b907adf3b732c0d277193e6249dbc43f9e9686d26e1e2349741e3334b9fdd96"},
+    {file = "pyptt-2.3.16.tar.gz", hash = "sha256:37f6c1d2e4b4eac5987f0c6be6cb9a36a7ea1cbce11efb6a578460fe63c2cfde"},
 ]
 
 [package.dependencies]
@@ -1021,4 +1021,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "124431f2056b907d83aa39be4ad0e740919a9ba51b11a472ffebc868c64529da"
+content-hash = "791c8991fbd439d37e915d0b2476ecf10a0cd548b2679e9847653dbfaf2aefce"
